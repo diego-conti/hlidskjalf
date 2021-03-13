@@ -1,0 +1,10 @@
+1;1;1;4;5
+1;1;2;Alfaðir;5
+1;1;3;4;Odin
+1;2;1;þórr;Odin
+1;2;2;þórr;Thor
+4;3;2;þórr;Huginn
+omitted by rule: omit if column 6 contains Hugin
+omitted by rule: omit if column 6 contains Hugin
+8;3;2;Huginn;0
+omitted by rule: omit if column 5 matches Muninn
