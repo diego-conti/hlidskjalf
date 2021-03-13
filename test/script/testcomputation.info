@@ -1,0 +1,6 @@
+columns {
+	int
+	range 1
+	string
+}
+

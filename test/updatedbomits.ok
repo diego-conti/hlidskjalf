@@ -1,0 +1,3 @@
+Omitted:
+omit if column 6 contains Hugin
+ omit if column 5 matches Muninn

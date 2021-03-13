@@ -1,0 +1,8 @@
+CSV schema with 8 columns
+primary input column 1
+secondary input column 2 of type range
+secondary input column 3 of type text
+column 4 {Replacement rule Odin -> Alfaðir,Replacement rule Thor -> þórr}
+column 5 {}
+omit if column 6 contains Hugin
+omit if column 5 matches Muninn

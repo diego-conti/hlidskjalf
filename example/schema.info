@@ -1,0 +1,10 @@
+columns 4 {
+	output 4
+}
+
+inputcolumns 1 {
+	rangeinputcolumn 2
+	textinputcolumn 3
+}
+
+

@@ -1,0 +1,31 @@
+columns 8 {
+	output 4 {
+		replacement {
+			match Odin
+			with Alfaðir
+		}
+		replacement {
+			match Thor
+			with þórr
+		}
+	}
+	output 5
+}
+
+omitrules {
+	condition {
+		column 6
+		contains Hugin
+	}
+	condition {
+		column 5
+		match Muninn	
+	}
+}
+
+inputcolumns 1 {
+	rangeinputcolumn 2
+	textinputcolumn 3
+}
+
+
