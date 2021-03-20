@@ -9,7 +9,7 @@ The work script takes a list of computations as an input and outputs a CSV file 
 
 The schema file defines the format of both the work script output and the computations file; in particular, it defines which columns correspond to computation input, which to output, and which should be ignored. In addition, the schema file may specify that some columns of the computation file represent ranges; this means that a row in the computation file is converted into a sequence of computations to be fed to the work script, one for each integer in the specified range.
 
-# Compiling and testing
+## Compiling and testing
 
 Hliðskjálf has been tested on CentOS Linux 7, using gcc 8.3.1, boost 1.71 and Magma 2.24-5.
 
@@ -29,7 +29,7 @@ The directory *example* contains an example which can be run using
 	
 	example/sh/run.sh
 
-# Components
+## Components
 There are two components to this program.
 
 *Yggdrasill* reads the output of the work script and stores it into a database. The current implementation of the database is just a sequence of CSV files, with name parametrized by the primary input column. Each row contains the secondary input and the output. The database can then be read by a Magma script, see *examples/readfromdb.m* for an example.

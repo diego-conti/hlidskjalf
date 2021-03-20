@@ -129,7 +129,7 @@ Parameters command_line_parameters(int argv, char** argc) {
 	
 	Parameters result;
 	if (vm.count("batch-mode")) result.operating_mode=OperatingMode::BATCH_MODE;
-	result.script_parameters={vm["script"].as<string>(), vm["memory"].as<int>()*1024*1024, output_dir,vm["flags"].as<string>(), vm["extension"].as<string>()};
+	result.script_parameters={vm["script"].as<string>(), vm["memory"].as<int>(), output_dir,vm["flags"].as<string>(), vm["extension"].as<string>()};
 	result.input_parameters={vm["computations"].as<string>(), vm["schema"].as<string>(),vm["db"].as<string>()};
 	result.computation_parameters={vm["nthreads"].as<int>(), vm["workload"].as<int>(),  vm["free-memory"].as<int>()*1024*1024};
 	result.communication_parameters={valhalla,random_non_existing_file()};
