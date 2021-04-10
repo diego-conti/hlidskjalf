@@ -34,7 +34,7 @@ public:
 	string to_string() const {
 		string s="Omitted:\n";
 		for (auto p : omitted_by) 
-			s+=p.second + ": "+p.first->to_string()+"\n";
+			s+=std::to_string(p.second) + ": "+p.first->to_string()+"\n";
 		return s;
 	}
 	OmittedEntries& operator+=(const OmittedEntries& other) {
