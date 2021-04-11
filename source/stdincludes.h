@@ -23,9 +23,11 @@
 #include <vector>
 #include <list>
 #include <set>
+#include <deque>
 #include <iostream>
 #include <map>
 #include <memory>
+#include <optional>
 
 using std::string;
 using namespace std::literals;
@@ -34,6 +36,9 @@ using std::stoi;
 
 using std::unique_ptr;
 using std::make_unique;
+using std::optional;
+using std::make_optional;
+using std::nullopt;
 
 using std::max;
 using std::min;
@@ -41,6 +46,7 @@ using std::min;
 using std::vector;
 using std::list;
 using std::set;
+using std::deque;
 using std::map;
 using std::pair;
 

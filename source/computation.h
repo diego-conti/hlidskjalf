@@ -58,7 +58,6 @@ void eliminate_computations(istream& is, T& computations, const CSVSchema& schem
 	int count=0;
 	while (has_data_after_skipping_empty_lines(is)) {
 		try {
-			if (!(++count%100000)) cout<<"eliminated first "<<count<<endl;
 				CSVLine input{get_line_with_balanced_curly_braces(is)};    			
 				erase(computations,CSVReader::extract_computation(input,schema));
 		}

@@ -21,6 +21,9 @@
 #include <boost/process.hpp>
 #include "parameters.h"
 
+constexpr int COMPUTATIONS_TO_STORE_IN_MEMORY=1024*1024;
+
+
 class MagmaRunner {
 	string magma_script;
 	string magma_path;	
@@ -75,6 +78,9 @@ protected:
 		for (auto& computation : computations) 
 				valhalla_file<<computation.to_string()<<";"<<parameters.script_parameters.memory_per_thread<<";"<<script_version<<endl;
 	}
+	optional<SimpleDatabaseView> create_db_view() const {
+		return !parameters.input_parameters.db.empty()? make_optional<SimpleDatabaseView>(parameters.input_parameters.db,schema.no_secondary_input_columns()) : nullopt;
+	}
 public:
 	void init(const Parameters& parameters) {	
 		this->parameters=parameters;
@@ -84,9 +90,8 @@ public:
 		magma_runner=make_unique<MagmaRunner>(parameters.script_parameters.script);
 		script_version=magma_runner->script_version();
 		verify_files_exist(parameters);
-		auto primary_ids=load_computations(parameters.input_parameters.input_file,schema);		
-		if (!parameters.input_parameters.db.empty()) eliminate_computations_in_db(SimpleDatabaseView{parameters.input_parameters.db,schema.no_secondary_input_columns()},primary_ids);
-		last_process_id=eliminate_precalculated_and_determine_last_process_id(parameters.script_parameters.output_dir,schema);
+		load_computations(parameters.input_parameters.input_file,schema,COMPUTATIONS_TO_STORE_IN_MEMORY/2);
+		last_process_id=SynchronizedComputations::last_used_id(parameters.script_parameters.output_dir);
 	}
 	
 	static ComputationRunner& singleton() {
@@ -95,6 +100,8 @@ public:
 	}
 
 	void add_computations_to_do(list<Computation>& assigned_computations) {
+			if (no_computations()<parameters.computation_parameters.computations_per_process*parameters.computation_parameters.nthreads)
+				unpack_computations_and_remove_already_processed(COMPUTATIONS_TO_STORE_IN_MEMORY, create_db_view(), parameters.script_parameters.output_dir, schema);	
 			auto computations_per_process=min(parameters.computation_parameters.computations_per_process, static_cast<int>(no_computations())/parameters.computation_parameters.nthreads);
 			if (computations_per_process==0 && assigned_computations.empty()) computations_per_process=1;
 			SynchronizedComputations::add_computations_to_do(assigned_computations,computations_per_process);

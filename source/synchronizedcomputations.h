@@ -66,7 +66,8 @@ public:
 
 class SynchronizedComputations {
 	set<Computation> computations,bad;
-	mutex computations_mtx, bad_mtx;
+	deque<ComputationTemplate> packed_computations;
+	mutex computations_mtx, bad_mtx, packed_computations_mtx;
 	unique_ptr<UserInterface> ui=make_unique<NoUserInterface>();
 
 	void synchronized_add_computations_to_do(list<Computation>& assigned_computations, int computations_per_process) {
@@ -75,21 +76,19 @@ class SynchronizedComputations {
 			assigned_computations.insert(assigned_computations.end(),i,j);
 			computations.erase(i,j);
 	}
-	
-protected:
-//to be called during initialization:
-	set<int> load_computations(const string& input_file,const CSVSchema& schema) {
-		ifstream s{input_file};
-		set<int> primary_ids;
-		while (has_data_after_skipping_empty_lines(s)) {
-			CSVLine input{get_line_with_balanced_curly_braces(s)};		
-			auto computation_template=CSVReader::extract_computation_template(input,schema);
-			primary_ids.insert(computation_template.primary_input());
-			auto computation_instances=computation_template.computation_instances();
-			computations.insert(computation_instances.begin(),computation_instances.end());
-		}
-		ui->loaded_computations(computations.size());
-		return primary_ids;
+
+	set<int> unpack_computations(int threshold) {
+			set<int> primary_ids;
+			packed_computations_mtx.lock();
+			while (computations.size()<threshold && !packed_computations.empty()) {
+				primary_ids.insert(packed_computations.front().primary_input());
+				auto computation_instances=packed_computations.front().computation_instances();
+				computations.insert(computation_instances.begin(),computation_instances.end());
+				packed_computations.pop_front();
+			}
+			packed_computations_mtx.unlock();
+			ui->loaded_computations(computations.size());
+			return primary_ids;
 	}
 	void eliminate_computations_in_db(const SimpleDatabaseView& db_view, const set<int>& group_orders) {
 		int eliminated=0;
@@ -100,7 +99,40 @@ protected:
 		db_view.iterate_through_entries(eliminate_function,group_orders);
 		ui->removed_computations_in_db(eliminated);
 	}
-	int eliminate_precalculated_and_determine_last_process_id(const string& output_dir,const CSVSchema& schema) {
+	void eliminate_precalculated(const string& output_dir,const CSVSchema& schema) {
+    for (auto& x : boost::filesystem::directory_iterator(output_dir))
+    	if (boost::filesystem::is_regular_file(x)) {
+				std::ifstream f{x.path().native()};
+    		eliminate_computations<CSVReader>(f,computations,schema);
+    	}	
+    ui->removed_precalculated(computations.size());
+	}	
+protected:
+//to be called at initialization or when a new input_file is provided through the UI
+	set<int> load_computations(const string& input_file,const CSVSchema& schema, int max_computations_in_template) {
+		ifstream s{input_file};
+		set<int> primary_ids;
+		packed_computations_mtx.lock();
+		while (has_data_after_skipping_empty_lines(s)) {
+			CSVLine input{get_line_with_balanced_curly_braces(s)};		
+			auto computation_template=CSVReader::extract_computation_template(input,schema);
+			for (auto& part : computation_template.split(max_computations_in_template))
+				packed_computations.push_back(part);
+		}
+		packed_computations_mtx.unlock();
+		return primary_ids;
+	}
+//unpack computation templates into computations and remove those already processed
+	void unpack_computations_and_remove_already_processed(int threshold, const optional<SimpleDatabaseView>& db_view,const string& output_dir,const CSVSchema& schema) {	
+		computations_mtx.lock();
+		while (computations.size()<threshold && !packed_computations.empty()) {
+			auto primary_ids=unpack_computations(threshold);
+			if (db_view) eliminate_computations_in_db(db_view.value(),primary_ids);
+			eliminate_precalculated(output_dir,schema);
+		}
+		computations_mtx.unlock();
+	}
+	int last_used_id(const string& output_dir) const {
 		int last_process_id=0;
     for (auto& x : boost::filesystem::directory_iterator(output_dir))
     	if (boost::filesystem::is_regular_file(x)) {
@@ -109,13 +141,9 @@ protected:
     			last_process_id=max(process_number,last_process_id);
     		}
     		catch (std::invalid_argument& e) {}
-				std::ifstream f{x.path().native()};
-    		eliminate_computations<CSVReader>(f,computations,schema);
     	}	
-    ui->removed_precalculated(computations.size());
-   	return last_process_id;
+   	return last_process_id;	
 	}
-	
 	virtual void to_valhalla(set<Computation>& computations) =0;
 public:
 	template<typename InterfaceType, typename... Args>

@@ -24,6 +24,9 @@
 class Field {
 public:
 	virtual vector<string> to_strings() const=0;	
+	virtual int no() const =0;
+	virtual list<unique_ptr<Field>> split(int parts) const=0;
+	virtual unique_ptr<Field> copy() const=0;
 };
 
 class TextField : public Field {
@@ -33,6 +36,15 @@ public:
 	vector<string> to_strings() const override {
 		return {text};
 	}	
+	int no() const override {return 1;}
+	list<unique_ptr<Field>> split(int parts) const override {
+		list<unique_ptr<Field>> result;
+		result.push_back(copy());
+		return result;
+	};
+	unique_ptr<Field> copy() const override {
+		return make_unique<TextField>(*this);
+	}
 };
 
 class RangeField : public Field {
@@ -45,14 +57,57 @@ public:
 		for (int i = min; i<=max;++i)
 			result.push_back(std::to_string(i));
 		return result;
-	}		
+	}	
+	int no() const override {return max-min+1;}
+	list<unique_ptr<Field>> split(int parts) const override {
+		int step=(max-min+1)/parts;
+		if (step==0) step=1;
+		int begin=min;
+		list<unique_ptr<Field>> result;
+		while (begin + 2*step<max) {
+			result.push_back(make_unique<RangeField>(begin,begin+step-1));
+			begin+=step;
+		}
+		result.push_back(make_unique<RangeField>(begin,max));
+		return result;
+	}
+	unique_ptr<Field> copy() const override {
+		return make_unique<RangeField>(*this);
+	}
 };
 
 class ComputationTemplate {
 	int primary_input_;
 	vector<unique_ptr<Field>> secondary_inputs_;
+	list<Computation> computation_instances(vector<string> starting_with, vector<unique_ptr<Field>>::const_iterator to_assign) const {
+		list<Computation> result;
+		if (to_assign==secondary_inputs_.end()) return {Computation{primary_input_,starting_with}};	
+		starting_with.resize(starting_with.size()+1);
+		auto next=to_assign;
+		++next;
+		for (auto& field : (*to_assign)->	to_strings()) {
+			starting_with.back()=field;
+			result.splice(result.begin(),computation_instances(starting_with,next));
+		}
+		return result;
+	}	
+	int largest_field() const {
+		int largest=0;
+		int max_size=secondary_inputs_[0]->no();
+		for (int i=1;i<secondary_inputs_.size();++i)
+			if (secondary_inputs_[i]->no()>max_size) {
+				max_size=secondary_inputs_[i]->no();
+				largest=i;
+			}
+		return largest;
+	}
 public:
 	ComputationTemplate(int primary_input) : primary_input_{primary_input} {}
+	ComputationTemplate(ComputationTemplate&&)=default;
+	ComputationTemplate(const ComputationTemplate& other)  : primary_input_{other.primary_input_} {
+		for (auto& i : other.secondary_inputs_)
+			secondary_inputs_.push_back(i->copy());
+	}
 	void add_range(const string& field) {
 		auto i=field.find("..");
 		if (i==string::npos) throw CSVException("invalid range",field);
@@ -74,19 +129,26 @@ public:
 		starting_with.reserve(secondary_inputs_.size());
 		return computation_instances(starting_with,secondary_inputs_.begin());
 	}
-	list<Computation> computation_instances(vector<string> starting_with, vector<unique_ptr<Field>>::const_iterator to_assign) const {
-		list<Computation> result;
-		if (to_assign==secondary_inputs_.end()) return {Computation{primary_input_,starting_with}};	
-		starting_with.resize(starting_with.size()+1);
-		auto next=to_assign;
-		++next;
-		for (auto& field : (*to_assign)->	to_strings()) {
-			starting_with.back()=field;
-			result.splice(result.begin(),computation_instances(starting_with,next));
+	int primary_input() const {return primary_input_;}
+	int no_computations() const {
+		int n=1;
+		for (auto& field : secondary_inputs_) n*=field->no();
+		return n;	
+	}
+	vector<ComputationTemplate> split(int max_size) const {
+		int parts=no_computations()/max_size+1;
+		if (parts == 1) return {*this};
+		vector<ComputationTemplate> result;
+		result.reserve(parts);
+		int i=largest_field();
+		auto split_fields=secondary_inputs_[i]->split(parts);
+		for (auto& split_field : 	split_fields) {
+			ComputationTemplate t{*this};
+			t.secondary_inputs_[i]=std::move(split_field);
+			result.push_back(std::move(t));
 		}
 		return result;
-	}	
-	int primary_input() const {return primary_input_;}
+	}
 };
 
 #endif
