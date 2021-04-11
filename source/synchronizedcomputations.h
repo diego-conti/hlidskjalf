@@ -44,8 +44,8 @@ template<typename Iterator> Iterator n_th_element_or_end(Iterator begin, Iterato
 
 class UserInterface {
 public:
-	virtual void computations_added_to_thread(int overall_unassigned_computations, int assigned_computations) const=0;
-	virtual void bad_computation(const Computation& computation) const =0;
+  virtual void computations_added_to_thread(int overall_unassigned_computations, int assigned_computations, megabytes memory_limit) const=0;
+  virtual void bad_computation(const Computation& computation, megabytes memory_limit) const =0;
 	virtual void removed_computations_in_db(int computations) const=0;
 	virtual	void removed_precalculated(int computations) const=0;
 	virtual void loaded_computations(int computations) const=0;
@@ -56,8 +56,8 @@ public:
 
 class NoUserInterface : public UserInterface {
 public:
-	void computations_added_to_thread(int overall_unassigned_computations, int assigned_computations) const override {}
-	void bad_computation(const Computation& computation) const override  {}
+	void computations_added_to_thread(int overall_unassigned_computations, int assigned_computations, megabytes memory_limit) const override {}
+	void bad_computation(const Computation& computation, megabytes memory_limit) const override  {}
 	void removed_computations_in_db(int computations) const override{}
 	void removed_precalculated(int computations) const override {}
   void loaded_computations(int computations) const override{}
@@ -156,20 +156,21 @@ public:
 		ui=make_unique<InterfaceType>(std::forward<Args>(args)...);
 	}
 
-	void mark_as_bad(Computation computation) {	
+	void mark_as_bad(Computation computation, megabytes memory_limit) {	
 		bad_mtx.lock();			
-		ui->bad_computation(computation);
+		ui->bad_computation(computation,memory_limit);
 		bad.insert(computation);
 		bad_mtx.unlock();
 	}
-	void add_computations_to_do(list<Computation>& assigned_computations, int computations_per_process) {
+	void add_computations_to_do(list<Computation>& assigned_computations, int computations_per_process, megabytes memory_limit) {
+	//TODO retrieve from valhalla
 		computations_mtx.lock();
 		int computations_size=computations.size();
 		if (computations_size) 
 			synchronized_add_computations_to_do(assigned_computations,computations_per_process);
 		computations_mtx.unlock();
 		if (computations_size)
-				ui->computations_added_to_thread(computations_size,assigned_computations.size());
+				ui->computations_added_to_thread(computations_size,assigned_computations.size(),memory_limit);
 	}
 	void flush_bad() {
 		bad_mtx.lock();

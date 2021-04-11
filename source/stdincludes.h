@@ -60,5 +60,6 @@ using std::istream;
 using std::cout;
 using std::endl;
 
+using megabytes = int;
 
 #endif

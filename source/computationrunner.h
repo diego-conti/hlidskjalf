@@ -40,12 +40,12 @@ public:
 		return script_version;
 	}
 
-	void invoke_magma_script(const string& process_id,const list<Computation>& computations,const Parameters& parameters) const {
+	void invoke_magma_script(const string& process_id,const list<Computation>& computations,const Parameters& parameters, megabytes memory_limit) const {
 		auto data_filename=parameters.communication_parameters.huginn+"/"+process_id+".data";
 		ofstream file{data_filename,std::ofstream::trunc};
 		for (auto x: computations) file<<x.to_string()<<endl;
 		file.close();
-		boost::process::child child{magma_path+" -b "+parameters.script_parameters.script_invocation(process_id,data_filename), boost::process::std_out > boost::process::null};
+		boost::process::child child{magma_path+" -b "+parameters.script_parameters.script_invocation(process_id,data_filename, memory_limit), boost::process::std_out > boost::process::null};
 		child.wait();	
 	//if the program is terminated, the destructor of child is invoked and the child process is terminated
 	}
@@ -75,8 +75,9 @@ class ComputationRunner : public SynchronizedComputations {
 protected:
 	void to_valhalla(set<Computation>& computations) override {
 		ofstream valhalla_file{parameters.communication_parameters.valhalla,std::ofstream::app};
+		int memory_limit=0;	//FIXME
 		for (auto& computation : computations) 
-				valhalla_file<<computation.to_string()<<";"<<parameters.script_parameters.memory_per_thread<<";"<<script_version<<endl;
+				valhalla_file<<computation.to_string()<<";"<<memory_limit<<";"<<script_version<<endl;
 	}
 	optional<SimpleDatabaseView> create_db_view() const {
 		return !parameters.input_parameters.db.empty()? make_optional<SimpleDatabaseView>(parameters.input_parameters.db,schema.no_secondary_input_columns()) : nullopt;
@@ -99,12 +100,12 @@ public:
 		return computations_to_do;
 	}
 
-	void add_computations_to_do(list<Computation>& assigned_computations) {
+	void add_computations_to_do(list<Computation>& assigned_computations, megabytes memory_limit) {
 			if (no_computations()<parameters.computation_parameters.computations_per_process*parameters.computation_parameters.nthreads)
 				unpack_computations_and_remove_already_processed(COMPUTATIONS_TO_STORE_IN_MEMORY, create_db_view(), parameters.script_parameters.output_dir, schema);	
 			auto computations_per_process=min(parameters.computation_parameters.computations_per_process, static_cast<int>(no_computations())/parameters.computation_parameters.nthreads);
 			if (computations_per_process==0 && assigned_computations.empty()) computations_per_process=1;
-			SynchronizedComputations::add_computations_to_do(assigned_computations,computations_per_process);
+			SynchronizedComputations::add_computations_to_do(assigned_computations,computations_per_process,memory_limit);
 	}
 	
 	void check_memory_and_flush_bad() {	
@@ -119,8 +120,8 @@ public:
 	}
 	
 	
-	list<Computation> compute(const string& process_id, list<Computation> computations) const {
-		magma_runner->invoke_magma_script(process_id, computations,parameters);
+	list<Computation> compute(const string& process_id, list<Computation> computations, megabytes memory_limit) const {
+		magma_runner->invoke_magma_script(process_id, computations,parameters,memory_limit);
 		auto output_filename=parameters.script_parameters.output_dir+"/"+process_id+parameters.script_parameters.work_output_extension;
 		ifstream result_file{output_filename};	
 		eliminate_computations<CSVReader>(result_file,computations,schema);

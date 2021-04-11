@@ -26,16 +26,16 @@ class StreamUserInterface : public UserInterface {
 	mutable int pos=0;
 public:
 	StreamUserInterface(ostream& os) : os{os} {}
-	void computations_added_to_thread(int overall_unassigned_computations, int assigned_computations) const override {
+	void computations_added_to_thread(int overall_unassigned_computations, int assigned_computations, megabytes memory_limit) const override {
 		lock.lock();
 		if (assigned_computations) 
-			os<<"process started with "<<assigned_computations<<" computations, ";
+			os<<"process with "<<memory_limit<<"MB started with "<<assigned_computations<<" computations, ";
 		os<<overall_unassigned_computations<<" unassigned computations remain"<<endl;
 		lock.unlock();
 	}	
-	void bad_computation(const Computation& computation) const override {
+	void bad_computation(const Computation& computation, megabytes memory_limit) const override {
 		lock.lock();
-		os<<"marking "<<computation.to_string()<<" as bad"<<endl;
+		os<<"could not complete "<<computation.to_string()<<" with "<<memory_limit<<" MB of memory"<<endl;
 		lock.unlock();
 	}
 	void removed_computations_in_db(int computations) const override {
