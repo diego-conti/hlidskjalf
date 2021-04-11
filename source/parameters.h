@@ -108,7 +108,7 @@ Parameters command_line_parameters(int argv, char** argc) {
     
 			//computation parameters
     ("nthreads", po::value<int>()->default_value(10), "number of worker threads and magma processes to be run")
-    ("workload", po::value<int>()->default_value(10), "computations per process")
+    ("workload", po::value<int>()->default_value(100), "computations per process")
     ("free-memory", po::value<int>()->default_value(0), "if set, quit all computations when system free memory goes below this threshold in GB")
     ("memory", po::value<int>()->default_value(128), "base memory limit in MB for each thread")
     ("total-memory", po::value<int>()->default_value(4), "total memory limit in GB for all threads")

@@ -31,6 +31,7 @@
 using std::future;
 using std::thread;
 using std::mutex;
+using std::unique_lock;
 using std::promise;
 
 template<typename Iterator> Iterator n_th_element_or_end(Iterator begin, Iterator end, int n) {
@@ -90,6 +91,14 @@ public:
 			if (p.first<memory_limit) 
 				result.splice(result.end(),p.second,p.second.begin(),n_th_element_or_end(p.second.begin(),p.second.end(),no_computations-result.size()));
 		return result;
+	}
+	megabytes lowest_effective_memory_limit() const {
+		int lowest=std::numeric_limits<int>::max();
+		for (auto& p:computations_by_memory_limit) if (p.first<lowest) lowest=p.first;
+		return lowest;
+	}
+	bool empty() const {
+		return all_of(computations_by_memory_limit.begin(),computations_by_memory_limit.end(),[](auto& pair) {return pair.second.empty();});
 	}
 };
 
@@ -163,13 +172,12 @@ protected:
 	}
 //unpack computation templates into computations and remove those already processed
 	void unpack_computations_and_remove_already_processed(int threshold, const optional<SimpleDatabaseView>& db_view,const string& output_dir,const CSVSchema& schema) {	
-		computations_mtx.lock();
+		unique_lock<mutex> lck{computations_mtx};
 		while (computations.size()<threshold && !packed_computations.empty()) {
 			auto primary_ids=unpack_computations(threshold);
 			if (db_view) eliminate_computations_in_db(db_view.value(),primary_ids);
 			eliminate_precalculated(output_dir,schema);
 		}
-		computations_mtx.unlock();
 	}
 	int last_used_id(const string& output_dir) const {
 		int last_process_id=0;
@@ -191,10 +199,9 @@ public:
 	}
 
 	void mark_as_bad(Computation computation, megabytes memory_limit) {	
-		bad_mtx.lock();			
+		unique_lock<mutex> lock{bad_mtx};		
 		ui->bad_computation(computation,memory_limit);
-		bad.insert(std::move(computation),memory_limit);
-		bad_mtx.unlock();
+		bad.insert(std::move(computation),memory_limit);		
 	}
 	void add_computations_to_do(list<Computation>& assigned_computations, int computations_per_process, megabytes memory_limit) {
 		computations_mtx.lock();
@@ -206,17 +213,28 @@ public:
 				ui->computations_added_to_thread(computations_size,assigned_computations.size(),memory_limit);
 	}
 	void flush_bad() {
-		bad_mtx.lock();
+		unique_lock<mutex> lock{bad_mtx};
 		int removed=to_valhalla(bad);
 		if (removed) ui->aborted_computations(removed);
 		else ui->tick();
-		bad_mtx.unlock();
 	}
 	void print_computations() const {
 		for (auto& x: computations) ui->print_computation(x);
 	}
 	int no_computations() const {
 		return computations.size();
+	}
+	megabytes lowest_effective_memory_limit() {
+		if (!computations.empty() || !packed_computations.empty()) return 0;
+		unique_lock<mutex> lock{bad_mtx};
+		return bad.lowest_effective_memory_limit();
+	}
+	bool finished() {
+		if (computations.empty() && packed_computations.empty()) {
+			unique_lock<mutex> lock{bad_mtx};
+			return bad.empty();			
+		}
+		else return false;
 	}
 };
 

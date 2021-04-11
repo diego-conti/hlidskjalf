@@ -27,54 +27,45 @@ class StreamUserInterface : public UserInterface {
 public:
 	StreamUserInterface(ostream& os) : os{os} {}
 	void computations_added_to_thread(int overall_unassigned_computations, int assigned_computations, megabytes memory_limit) const override {
-		lock.lock();
+		unique_lock<mutex> lck{lock};
 		if (assigned_computations) 
 			os<<"process with "<<memory_limit<<"MB started with "<<assigned_computations<<" computations, ";
 		os<<overall_unassigned_computations<<" unassigned computations remain"<<endl;
-		lock.unlock();
 	}	
 	void bad_computation(const Computation& computation, megabytes memory_limit) const override {
-		lock.lock();
+		unique_lock<mutex> lck{lock};
 		os<<"could not complete "<<computation.to_string()<<" with "<<memory_limit<<" MB of memory"<<endl;
-		lock.unlock();
 	}
 	void removed_computations_in_db(int computations) const override {
-		lock.lock();
+		unique_lock<mutex> lck{lock};
 		os<<"eliminated "<<computations<<" computations from database"<<endl;
-		lock.unlock();
 	}	
 	void removed_precalculated(int computations) const override {
-		lock.lock();
+		unique_lock<mutex> lck{lock};
 		os<<computations<<" computations remain after eliminating those already calculated"<<endl;
-		lock.unlock();
 	}	
 	void total_computations(int computations) const override {
-		lock.lock();
+		unique_lock<mutex> lck{lock};
 		os<<"Total number of computations loaded: "<<computations<<endl;	
-		lock.unlock();
 	}	
 	void unpacked_computations(int computations) const override {
-		lock.lock();
+		unique_lock<mutex> lck{lock};
 		os<<"processing "<<computations<<" computations"<<endl;	
-		lock.unlock();
 	}	
 	void aborted_computations(int computations) const override {
-		lock.lock();
+		unique_lock<mutex> lck{lock};
 		os<<computations<<" moved to valhalla"<<endl;
-		lock.unlock();
 	}
 	void tick() const override {
     static char bars[] = { '/', '-', '\\', '|' };	
-		lock.lock();
+		unique_lock<mutex> lck{lock};
 		os<<bars[pos]<<"\r";
 		os.flush();
 		pos = (pos + 1) % 4;
-		lock.unlock();
 	}
 	void print_computation(const Computation& computation) const override {
-		lock.lock();
+		unique_lock<mutex> lck{lock};
 		os<<computation.to_string()<<endl;
-		lock.unlock();	
 	}
 };
 #endif

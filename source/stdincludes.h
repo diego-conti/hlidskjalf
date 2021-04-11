@@ -29,6 +29,7 @@
 #include <memory>
 #include <optional>
 #include <unordered_set>
+#include <limits>
 
 using std::string;
 using namespace std::literals;
