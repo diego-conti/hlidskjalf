@@ -48,9 +48,14 @@ public:
 		os<<computations<<" computations remain after eliminating those already calculated"<<endl;
 		lock.unlock();
 	}	
-	void loaded_computations(int computations) const override {
+	void total_computations(int computations) const override {
 		lock.lock();
-		os<<"initializing "<<computations<<" computations"<<endl;	
+		os<<"Total number of computations loaded: "<<computations<<endl;	
+		lock.unlock();
+	}	
+	void unpacked_computations(int computations) const override {
+		lock.lock();
+		os<<"processing "<<computations<<" computations"<<endl;	
 		lock.unlock();
 	}	
 	void aborted_computations(int computations) const override {

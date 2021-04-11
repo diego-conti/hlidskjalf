@@ -48,7 +48,8 @@ public:
   virtual void bad_computation(const Computation& computation, megabytes memory_limit) const =0;
 	virtual void removed_computations_in_db(int computations) const=0;
 	virtual	void removed_precalculated(int computations) const=0;
-	virtual void loaded_computations(int computations) const=0;
+  virtual void total_computations(int computations) const =0;
+  virtual void unpacked_computations(int computations) const=0;
 	virtual void aborted_computations(int computations) const=0;
 	virtual void tick() const=0;
 	virtual void print_computation(const Computation& computation) const=0;
@@ -60,24 +61,54 @@ public:
 	void bad_computation(const Computation& computation, megabytes memory_limit) const override  {}
 	void removed_computations_in_db(int computations) const override{}
 	void removed_precalculated(int computations) const override {}
-  void loaded_computations(int computations) const override{}
+  void total_computations(int computations) const override{}
+  void unpacked_computations(int computations) const override{}
 	void aborted_computations(int computations) const override {}
 	void tick() const override{}
 	void print_computation(const Computation& computation) const override {}
 };
 
+class AbortedComputations {
+	map<megabytes,list<Computation>> computations_by_memory_limit;
+public:
+	void insert(const Computation& computation, megabytes memory_limit) {
+		computations_by_memory_limit[memory_limit].push_back(computation);
+	}
+	void insert(Computation&& computation, megabytes memory_limit) {
+		computations_by_memory_limit[memory_limit].push_back(std::move(computation));
+	}
+	list<Computation> remove_exceeding_memory_limit(megabytes memory_limit) {
+		list<Computation> result;
+		for (auto& p : computations_by_memory_limit)
+			if (p.first>memory_limit) 
+				result.splice(result.end(),p.second);			
+		return result;
+	}
+	list<Computation> extract_within_memory_limit(megabytes memory_limit, int no_computations) {
+		list<Computation> result;
+		for (auto& p : computations_by_memory_limit)
+			if (p.first<memory_limit) 
+				result.splice(result.end(),p.second,p.second.begin(),n_th_element_or_end(p.second.begin(),p.second.end(),no_computations-result.size()));
+		return result;
+	}
+};
 
 
 class SynchronizedComputations {
 	unordered_set<Computation,boost::hash<Computation> > computations;
-	set<Computation> bad;
+	AbortedComputations bad;
 	deque<ComputationTemplate> packed_computations;
 	mutex computations_mtx, bad_mtx, packed_computations_mtx;
 	unique_ptr<UserInterface> ui=make_unique<NoUserInterface>();
 
-	void synchronized_add_computations_to_do(list<Computation>& assigned_computations, int computations_per_process) {
+	void synchronized_add_computations_to_do(list<Computation>& assigned_computations, int computations_per_process, megabytes memory_limit) {
 			int to_add=max(0,computations_per_process- static_cast<int>(assigned_computations.size()));
+			bad_mtx.lock();
+			auto resurrected=bad.extract_within_memory_limit(memory_limit, to_add);
+			bad_mtx.unlock();	
+			to_add-=resurrected.size();
 			auto i=computations.begin(),j=n_th_element_or_end(computations.begin(),computations.end(),to_add);
+			assigned_computations.splice(assigned_computations.end(),resurrected);
 			assigned_computations.insert(assigned_computations.end(),i,j);
 			computations.erase(i,j);
 	}
@@ -92,7 +123,7 @@ class SynchronizedComputations {
 				packed_computations.pop_front();
 			}
 			packed_computations_mtx.unlock();
-			ui->loaded_computations(computations.size());
+			ui->unpacked_computations(computations.size());
 			return primary_ids;
 	}
 	void eliminate_computations_in_db(const SimpleDatabaseView& db_view, const set<int>& group_orders) {
@@ -118,13 +149,16 @@ protected:
 		ifstream s{input_file};
 		set<int> primary_ids;
 		packed_computations_mtx.lock();
+		int total=0;
 		while (has_data_after_skipping_empty_lines(s)) {
 			CSVLine input{get_line_with_balanced_curly_braces(s)};		
 			auto computation_template=CSVReader::extract_computation_template(input,schema);
+			total+=computation_template.no_computations();
 			for (auto& part : computation_template.split(max_computations_in_template))
-				packed_computations.push_back(part);
+				packed_computations.push_back(part);				
 		}
 		packed_computations_mtx.unlock();
+		ui->total_computations(total);
 		return primary_ids;
 	}
 //unpack computation templates into computations and remove those already processed
@@ -149,7 +183,7 @@ protected:
     	}	
    	return last_process_id;	
 	}
-	virtual void to_valhalla(set<Computation>& computations) =0;
+	virtual int to_valhalla(AbortedComputations& computations) =0;
 public:
 	template<typename InterfaceType, typename... Args>
 	void create_user_interface(Args&&... args)  {
@@ -159,26 +193,22 @@ public:
 	void mark_as_bad(Computation computation, megabytes memory_limit) {	
 		bad_mtx.lock();			
 		ui->bad_computation(computation,memory_limit);
-		bad.insert(computation);
+		bad.insert(std::move(computation),memory_limit);
 		bad_mtx.unlock();
 	}
 	void add_computations_to_do(list<Computation>& assigned_computations, int computations_per_process, megabytes memory_limit) {
-	//TODO retrieve from valhalla
 		computations_mtx.lock();
 		int computations_size=computations.size();
 		if (computations_size) 
-			synchronized_add_computations_to_do(assigned_computations,computations_per_process);
+			synchronized_add_computations_to_do(assigned_computations,computations_per_process,memory_limit);
 		computations_mtx.unlock();
 		if (computations_size)
 				ui->computations_added_to_thread(computations_size,assigned_computations.size(),memory_limit);
 	}
 	void flush_bad() {
 		bad_mtx.lock();
-		if (bad.size()) {
-			ui->aborted_computations(bad.size());
-			to_valhalla(bad);
-			bad.clear();
-		}
+		int removed=to_valhalla(bad);
+		if (removed) ui->aborted_computations(removed);
 		else ui->tick();
 		bad_mtx.unlock();
 	}

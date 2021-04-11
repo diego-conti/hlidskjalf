@@ -73,11 +73,16 @@ class ComputationRunner : public SynchronizedComputations {
 		create_dir_if_needed(parameters.communication_parameters.huginn);		
 	}
 protected:
-	void to_valhalla(set<Computation>& computations) override {
-		ofstream valhalla_file{parameters.communication_parameters.valhalla,std::ofstream::app};
-		int memory_limit=0;	//FIXME
-		for (auto& computation : computations) 
+	int to_valhalla(AbortedComputations& computations) override {
+		int memory_limit=parameters.computation_parameters.total_memory_limit;
+		auto removed=computations.remove_exceeding_memory_limit(memory_limit);
+		if (!removed.empty()) {
+			ofstream valhalla_file{parameters.communication_parameters.valhalla,std::ofstream::app};
+			for (auto& computation : removed) 
 				valhalla_file<<computation.to_string()<<";"<<memory_limit<<";"<<script_version<<endl;
+			return removed.size();
+		}
+		else return 0;
 	}
 	optional<SimpleDatabaseView> create_db_view() const {
 		return !parameters.input_parameters.db.empty()? make_optional<SimpleDatabaseView>(parameters.input_parameters.db,schema.no_secondary_input_columns()) : nullopt;
