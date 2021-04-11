@@ -23,6 +23,7 @@
 
 //we use the input fields defined by the schema to define the computation
 class Computation {
+	friend std::size_t hash_value(const Computation&);
 	int primary_input_;
 	CSVLine secondary_inputs_;
 public:
@@ -43,12 +44,17 @@ public:
 };
 
 template<typename T>
-void erase(list<T>& container, T object) 
+void erase(list<T>& container, const T& object) 
 {
 	container.remove(object);
 }
 template<typename T>
-void erase(set<T>& container, T object) 
+void erase(set<T>& container, const T& object) 
+{
+	container.erase(object);
+}
+template<typename T,typename Hash>
+void erase(unordered_set<T,Hash>& container, const T& object) 
 {
 	container.erase(object);
 }

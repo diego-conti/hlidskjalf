@@ -26,6 +26,8 @@
 #include <thread>
 #include <mutex>
 #include <future>
+#include "hash.h"
+
 using std::future;
 using std::thread;
 using std::mutex;
@@ -34,8 +36,10 @@ using std::promise;
 template<typename Iterator> Iterator n_th_element_or_end(Iterator begin, Iterator end, int n) {
 		if (n==0) return begin;
 		auto result=begin;
-		advance(result,n);
+		std::advance(result,n);
 		return result == begin ? end : result;
+//note: in theory C++20 allows writing simply
+//	return std::advance(begin,n,end); 
 }
 
 class UserInterface {
@@ -65,7 +69,8 @@ public:
 
 
 class SynchronizedComputations {
-	set<Computation> computations,bad;
+	unordered_set<Computation,boost::hash<Computation> > computations;
+	set<Computation> bad;
 	deque<ComputationTemplate> packed_computations;
 	mutex computations_mtx, bad_mtx, packed_computations_mtx;
 	unique_ptr<UserInterface> ui=make_unique<NoUserInterface>();

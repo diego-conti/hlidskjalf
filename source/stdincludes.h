@@ -28,6 +28,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <unordered_set>
 
 using std::string;
 using namespace std::literals;
@@ -46,6 +47,8 @@ using std::min;
 using std::vector;
 using std::list;
 using std::set;
+using std::unordered_set;
+using std::hash;
 using std::deque;
 using std::map;
 using std::pair;

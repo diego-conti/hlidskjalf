@@ -23,6 +23,7 @@
 #include "exception.h"
 
 class CSVLine {
+	friend std::size_t hash_value(const CSVLine&);
 	vector<string> values;	
 public:
 	CSVLine()=default;	
