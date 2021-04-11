@@ -20,7 +20,7 @@ done
 mkdir -p test/output
 rm -f test/output/*
 
-bin/hliðskjálf --script test/script/workscript.m --memory 1 --workoutput test/output --computations test/computations/test.comp  --schema test/script/testschema.info --workload 1 >/dev/null
+bin/hliðskjálf --script test/script/workscript.m --workoutput test/output --computations test/computations/test.comp  --schema test/script/testschema.info --workload 1 >/dev/null
 cat test/output/* | sort > test/workscript.test
 
 for out in $(ls test/*.ok); do
