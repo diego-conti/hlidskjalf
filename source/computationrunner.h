@@ -72,6 +72,13 @@ class ComputationRunner : public SynchronizedComputations {
 		create_dir_if_needed(parameters.script_parameters.output_dir);
 		create_dir_if_needed(parameters.communication_parameters.huginn);		
 	}
+	//return the number of computation to assign to a process with a fixed memory_limit; this defaults to the parameter indicated in the command line, but it can be reduced if few computations remain to be done or if memory limit is high and the only remaining computations are previously aborted computations to be repeated
+	int no_computations_to_assign(megabytes memory_limit) {
+		int new_computations=no_computations();
+		if (new_computations) return min(parameters.computation_parameters.computations_per_process,new_computations/parameters.computation_parameters.nthreads);
+		else if (memory_limit <= lowest_effective_memory_limit()) return parameters.computation_parameters.computations_per_process;
+		else return 0;
+	}
 protected:
 	int to_valhalla(AbortedComputations& computations) override {
 		int memory_limit=parameters.computation_parameters.total_memory_limit;
@@ -104,11 +111,12 @@ public:
 		static ComputationRunner computations_to_do;
 		return computations_to_do;
 	}
-
+	
 	void add_computations_to_do(list<Computation>& assigned_computations, megabytes memory_limit) {
-			if (no_computations()<parameters.computation_parameters.computations_per_process*parameters.computation_parameters.nthreads)
-				unpack_computations_and_remove_already_processed(COMPUTATIONS_TO_STORE_IN_MEMORY, create_db_view(), parameters.script_parameters.output_dir, schema);	
-			auto computations_per_process=min(parameters.computation_parameters.computations_per_process, static_cast<int>(no_computations())/parameters.computation_parameters.nthreads);
+			int min_threshold=parameters.computation_parameters.computations_per_process*parameters.computation_parameters.nthreads;
+			if (no_computations()<min_threshold)
+				unpack_computations_and_remove_already_processed(parameters.computation_parameters.computations_per_process,COMPUTATIONS_TO_STORE_IN_MEMORY, create_db_view(), parameters.script_parameters.output_dir, schema);	
+			auto computations_per_process=no_computations_to_assign(memory_limit);
 			if (computations_per_process==0 && assigned_computations.empty()) computations_per_process=1;
 			SynchronizedComputations::add_computations_to_do(assigned_computations,computations_per_process,memory_limit);
 	}
@@ -123,7 +131,6 @@ public:
 	int assign_id() {
 		return ++last_process_id;
 	}
-	
 	
 	list<Computation> compute(const string& process_id, list<Computation> computations, megabytes memory_limit) const {
 		magma_runner->invoke_magma_script(process_id, computations,parameters,memory_limit);

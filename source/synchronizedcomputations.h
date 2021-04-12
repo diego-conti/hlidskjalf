@@ -36,6 +36,7 @@ using std::promise;
 
 template<typename Iterator> Iterator n_th_element_or_end(Iterator begin, Iterator end, int n) {
 		if (n==0) return begin;
+		assert(n>0);
 		auto result=begin;
 		std::advance(result,n);
 		return result == begin ? end : result;
@@ -54,6 +55,8 @@ public:
 	virtual void aborted_computations(int computations) const=0;
 	virtual void tick() const=0;
 	virtual void print_computation(const Computation& computation) const=0;
+	virtual	void thread_started(megabytes memory) const=0;
+	virtual void thread_stopped(megabytes memory) const=0;
 };
 
 class NoUserInterface : public UserInterface {
@@ -67,6 +70,8 @@ public:
 	void aborted_computations(int computations) const override {}
 	void tick() const override{}
 	void print_computation(const Computation& computation) const override {}
+	void thread_started(megabytes memory) const override {}
+	void thread_stopped(megabytes memory) const override {}
 };
 
 class AbortedComputations {
@@ -116,10 +121,12 @@ class SynchronizedComputations {
 			auto resurrected=bad.extract_within_memory_limit(memory_limit, to_add);
 			bad_mtx.unlock();	
 			to_add-=resurrected.size();
-			auto i=computations.begin(),j=n_th_element_or_end(computations.begin(),computations.end(),to_add);
-			assigned_computations.splice(assigned_computations.end(),resurrected);
-			assigned_computations.insert(assigned_computations.end(),i,j);
-			computations.erase(i,j);
+			if (!computations.empty()) {
+				auto i=computations.begin(),j=n_th_element_or_end(computations.begin(),computations.end(),to_add);
+				assigned_computations.splice(assigned_computations.end(),resurrected);
+				assigned_computations.insert(assigned_computations.end(),i,j);
+				computations.erase(i,j);
+			}
 	}
 
 	set<int> unpack_computations(int threshold) {
@@ -171,10 +178,10 @@ protected:
 		return primary_ids;
 	}
 //unpack computation templates into computations and remove those already processed
-	void unpack_computations_and_remove_already_processed(int threshold, const optional<SimpleDatabaseView>& db_view,const string& output_dir,const CSVSchema& schema) {	
+	void unpack_computations_and_remove_already_processed(int min_threshold, int max_threshold, const optional<SimpleDatabaseView>& db_view,const string& output_dir,const CSVSchema& schema) {	
 		unique_lock<mutex> lck{computations_mtx};
-		while (computations.size()<threshold && !packed_computations.empty()) {
-			auto primary_ids=unpack_computations(threshold);
+		while (computations.size()<min_threshold && !packed_computations.empty()) {
+			auto primary_ids=unpack_computations(max_threshold);
 			if (db_view) eliminate_computations_in_db(db_view.value(),primary_ids);
 			eliminate_precalculated(output_dir,schema);
 		}
@@ -205,12 +212,9 @@ public:
 	}
 	void add_computations_to_do(list<Computation>& assigned_computations, int computations_per_process, megabytes memory_limit) {
 		computations_mtx.lock();
-		int computations_size=computations.size();
-		if (computations_size) 
-			synchronized_add_computations_to_do(assigned_computations,computations_per_process,memory_limit);
+		synchronized_add_computations_to_do(assigned_computations,computations_per_process,memory_limit);
 		computations_mtx.unlock();
-		if (computations_size)
-				ui->computations_added_to_thread(computations_size,assigned_computations.size(),memory_limit);
+		ui->computations_added_to_thread(computations.size(),assigned_computations.size(),memory_limit);
 	}
 	void flush_bad() {
 		unique_lock<mutex> lock{bad_mtx};
@@ -231,10 +235,13 @@ public:
 	}
 	bool finished() {
 		if (computations.empty() && packed_computations.empty()) {
-			unique_lock<mutex> lock{bad_mtx};
-			return bad.empty();			
+			unique_lock<mutex> lock{bad_mtx,std::try_to_lock};
+			return lock? bad.empty() : false;
 		}
 		else return false;
+	}
+	UserInterface& get_ui() {
+		return *ui;
 	}
 };
 

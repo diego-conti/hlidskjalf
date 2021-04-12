@@ -67,5 +67,14 @@ public:
 		unique_lock<mutex> lck{lock};
 		os<<computation.to_string()<<endl;
 	}
+	void thread_started(megabytes memory) const override {
+		unique_lock<mutex> lck{lock};
+		os<<"thread started with a limit of "<<memory<<"MB"<<endl;
+	}
+	void thread_stopped(megabytes memory) const override {
+		unique_lock<mutex> lck{lock};
+		os<<"stopped thread with a limit of "<<memory<<"MB"<<endl;
+	}
+
 };
 #endif

@@ -8,7 +8,7 @@ class MemoryManager {
 	mutex suspension_mtx;		//mutex used to lock access to all the data in this class
 	megabytes allocated,limit,base_memory_limit;
 	std::condition_variable suspension;
-	int suspended_threads;
+	int suspended_threads=0;
 	
 	//return the megabytes that should be allocated or nullopt if not enough memory is available to start another process
 	optional<megabytes> to_request() const {
@@ -20,6 +20,18 @@ class MemoryManager {
 		return min(lowest*2,max_request);				
 	}
 	MemoryManager()=default;
+	megabytes start_and_unlock(megabytes memory) {
+		if (allocated+memory<=limit) {
+			allocated+=memory;
+			suspension_mtx.unlock();
+			ComputationRunner::singleton().get_ui().thread_started(memory);
+			return memory;
+		}
+		else {
+			suspension_mtx.unlock();
+			return wait_and_allocate();
+		}	
+	}	
 public:
 	static MemoryManager& singleton() {
 		static MemoryManager memory_manager;
@@ -28,11 +40,21 @@ public:
 	void release(megabytes n) {
 		unique_lock<mutex> lck{suspension_mtx};
 		allocated-=n;
+		++suspended_threads;
 		suspension.notify_one();
+		lck.unlock();
+		ComputationRunner::singleton().get_ui().thread_stopped(n);
 	}
+	megabytes start() {
+		suspension_mtx.lock();
+		return start_and_unlock(base_memory_limit);
+	}
+	megabytes start_large_thread() {
+		suspension_mtx.lock();
+		return start_and_unlock(max(base_memory_limit,limit-allocated));
+	}	
 	megabytes wait_and_allocate() {
 		unique_lock<mutex> lck{suspension_mtx};
-		++suspended_threads;
 		while (true) {
 			suspension.wait_for(lck,std::chrono::seconds(10));
 			if (ComputationRunner::singleton().finished()) return 0;
@@ -40,6 +62,8 @@ public:
 			if (request) {
 				allocated+=request.value();
 				--suspended_threads; 
+				lck.unlock();
+				ComputationRunner::singleton().get_ui().thread_started(request.value());
 				return request.value();
 			}
 		}		
@@ -54,19 +78,21 @@ public:
 	}
 };
 
+constexpr class large_tag_t {} large_tag;
+
 class WorkerThread {
 	int process_id;
 	string process_id_as_string;
 	thread thread_;
 	list<Computation> computations_to_do;	
 	
-	void main_loop() {
-		megabytes memory_limit;
-		while (memory_limit=MemoryManager::singleton().wait_and_allocate()) {
+	void main_loop(megabytes memory_limit) {
+		while (memory_limit) {
 			loop_compute(memory_limit);	
 			MemoryManager::singleton().release(memory_limit);
+			memory_limit=MemoryManager::singleton().wait_and_allocate();
 		}
-	};
+	}
 
 	void loop_compute(megabytes memory_limit) {
 		while (true) {
@@ -79,29 +105,44 @@ class WorkerThread {
 			}
 		}	
 	}
+	WorkerThread(const WorkerThread&) =delete;
+	WorkerThread(WorkerThread&&) =delete;
 public:
 	WorkerThread() : 
 		process_id{ComputationRunner::singleton().assign_id()}, 
 		process_id_as_string{to_string(process_id)},
-		thread_{&WorkerThread::main_loop,this}
+		thread_{&WorkerThread::main_loop,this,MemoryManager::singleton().start()}
+	{}
+	WorkerThread(large_tag_t) : 
+		process_id{ComputationRunner::singleton().assign_id()}, 
+		process_id_as_string{to_string(process_id)},
+		thread_{&WorkerThread::main_loop,this,MemoryManager::singleton().start_large_thread()}	
 	{}
 	void join() {thread_.join();}
 };
 
-
-
-
-vector<WorkerThread> create_worker_threads(const Parameters& parameters) {	 
-	try {
-		ComputationRunner::singleton().init(parameters);
-		MemoryManager::singleton().set_total_limit(parameters.computation_parameters.total_memory_limit);
-		MemoryManager::singleton().set_base_memory_limit(parameters.computation_parameters.base_memory_limit);
+class WorkerThreads {
+	vector<unique_ptr<WorkerThread>> threads;
+public:
+	WorkerThreads(const Parameters& parameters) {	 
+		try {
+			ComputationRunner::singleton().init(parameters);
+			MemoryManager::singleton().set_total_limit(parameters.computation_parameters.total_memory_limit);
+			MemoryManager::singleton().set_base_memory_limit(parameters.computation_parameters.base_memory_limit);
+		}
+		catch (Exception& e) {
+			cout<<e.what()<<endl;
+			throw;
+		}
+		for (int i=1;i<parameters.computation_parameters.nthreads;++i)
+			threads.push_back(make_unique<WorkerThread>());
+		threads.push_back(make_unique<WorkerThread>(large_tag));
 	}
-	catch (Exception& e) {
-		cout<<e.what()<<endl;
-		throw;
+	void join() {
+		for (auto& t: threads) t->join();
 	}
-	return vector<WorkerThread>{parameters.computation_parameters.nthreads};
-}
+};
+
+
 
 #endif

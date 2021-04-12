@@ -43,9 +43,8 @@ void launch_threads(const Parameters& parameters) {
 	try {
 		promise<void> terminate_signal;	
 		thread flush_thread=create_flush_thread(terminate_signal.get_future());
-		auto worker_threads=create_worker_threads(parameters);
-		for (auto& thread : worker_threads)
-				thread.join();
+		WorkerThreads worker_threads{parameters};
+		worker_threads.join();
 		terminate_signal.set_value();
 		flush_thread.join();
 	}
