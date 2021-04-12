@@ -93,7 +93,7 @@ public:
 	list<Computation> extract_within_memory_limit(megabytes memory_limit, int no_computations) {
 		list<Computation> result;
 		for (auto& p : computations_by_memory_limit)
-			if (p.first<memory_limit) 
+			if (p.first<memory_limit && !p.second.empty()) 
 				result.splice(result.end(),p.second,p.second.begin(),n_th_element_or_end(p.second.begin(),p.second.end(),no_computations-result.size()));
 		return result;
 	}

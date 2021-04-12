@@ -180,7 +180,6 @@ public:
 		for (auto& file : fs::directory_iterator(directory))  {
 			auto path=file.path();
 			int d=std::stoi(path.filename().native());
-			std::cout<<d<<std::endl;
 			iterate_through_entries(f,d,path);
 		}
 	}	

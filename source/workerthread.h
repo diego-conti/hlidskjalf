@@ -103,6 +103,7 @@ class WorkerThread {
 				ComputationRunner::singleton().mark_as_bad(computations_to_do.front(),memory_limit);
 				computations_to_do.pop_front();
 			}
+			if (ComputationRunner::singleton().large_thread(memory_limit)) return;
 		}	
 	}
 	WorkerThread(const WorkerThread&) =delete;

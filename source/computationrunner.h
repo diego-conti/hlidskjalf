@@ -72,12 +72,14 @@ class ComputationRunner : public SynchronizedComputations {
 		create_dir_if_needed(parameters.script_parameters.output_dir);
 		create_dir_if_needed(parameters.communication_parameters.huginn);		
 	}
-	//return the number of computation to assign to a process with a fixed memory_limit; this defaults to the parameter indicated in the command line, but it can be reduced if few computations remain to be done or if memory limit is high and the only remaining computations are previously aborted computations to be repeated
+	
+//return the number of computation to assign to a process with a fixed memory_limit; this defaults to the parameter indicated in the command line, but it can be reduced if few computations remain to be done. If the only computations that remain to be done are the previously aborted computations, then the default parameter for the others. For the large thread, the default parameter is divided by the square of the number of threads
 	int no_computations_to_assign(megabytes memory_limit) {
+		int nthreads=parameters.computation_parameters.nthreads;
 		int new_computations=no_computations();
-		if (new_computations) return min(parameters.computation_parameters.computations_per_process,new_computations/parameters.computation_parameters.nthreads);
-		else if (memory_limit <= lowest_effective_memory_limit()) return parameters.computation_parameters.computations_per_process;
-		else return 0;
+		int computations_per_process=(large_thread(memory_limit))? parameters.computation_parameters.computations_per_process/(nthreads*nthreads) : parameters.computation_parameters.computations_per_process;
+		if (new_computations) return min(computations_per_process,new_computations/parameters.computation_parameters.nthreads);
+		else return computations_per_process;
 	}
 protected:
 	int to_valhalla(AbortedComputations& computations) override {
@@ -139,7 +141,9 @@ public:
 		eliminate_computations<CSVReader>(result_file,computations,schema);
 		return computations;
 	}
-	
+	bool large_thread(megabytes memory_limit) {
+		return memory_limit > 2*parameters.computation_parameters.base_memory_limit && memory_limit > 2*lowest_effective_memory_limit();
+	}
 };
 
 #endif 
