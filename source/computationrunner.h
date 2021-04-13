@@ -40,7 +40,7 @@ public:
 		return script_version;
 	}
 
-	void invoke_magma_script(const string& process_id,const list<Computation>& computations,const Parameters& parameters, megabytes memory_limit) const {
+	void invoke_magma_script(const string& process_id,const AssignedComputations& computations,const Parameters& parameters, megabytes memory_limit) const {
 		auto data_filename=parameters.communication_parameters.huginn+"/"+process_id+".data";
 		ofstream file{data_filename,std::ofstream::trunc};
 		for (auto x: computations) file<<x.to_string()<<endl;
@@ -114,7 +114,7 @@ public:
 		return computations_to_do;
 	}
 	
-	void add_computations_to_do(list<Computation>& assigned_computations, megabytes memory_limit) {
+	void add_computations_to_do(AssignedComputations& assigned_computations, megabytes memory_limit) {
 			int min_threshold=parameters.computation_parameters.computations_per_process*parameters.computation_parameters.nthreads;
 			if (no_computations()<min_threshold)
 				unpack_computations_and_remove_already_processed(parameters.computation_parameters.computations_per_process,COMPUTATIONS_TO_STORE_IN_MEMORY, create_db_view(), parameters.script_parameters.output_dir, schema);	
@@ -134,7 +134,7 @@ public:
 		return ++last_process_id;
 	}
 	
-	list<Computation> compute(const string& process_id, list<Computation> computations, megabytes memory_limit) const {
+	AssignedComputations compute(const string& process_id, AssignedComputations computations, megabytes memory_limit) const {
 		magma_runner->invoke_magma_script(process_id, computations,parameters,memory_limit);
 		auto output_filename=parameters.script_parameters.output_dir+"/"+process_id+parameters.script_parameters.work_output_extension;
 		ifstream result_file{output_filename};	

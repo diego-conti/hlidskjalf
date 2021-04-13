@@ -107,6 +107,7 @@ public:
 	}
 };
 
+using AssignedComputations = unordered_set<Computation,boost::hash<Computation>>;
 
 class SynchronizedComputations {
 	unordered_set<Computation,boost::hash<Computation> > computations;
@@ -115,16 +116,16 @@ class SynchronizedComputations {
 	mutex computations_mtx, bad_mtx, packed_computations_mtx;
 	unique_ptr<UserInterface> ui=make_unique<NoUserInterface>();
 
-	void synchronized_add_computations_to_do(list<Computation>& assigned_computations, int computations_per_process, megabytes memory_limit) {
+	void synchronized_add_computations_to_do(AssignedComputations& assigned_computations, int computations_per_process, megabytes memory_limit) {
 			int to_add=max(0,computations_per_process- static_cast<int>(assigned_computations.size()));
 			bad_mtx.lock();
 			auto resurrected=bad.extract_within_memory_limit(memory_limit, to_add);
 			bad_mtx.unlock();	
 			to_add-=resurrected.size();
+			assigned_computations.insert(resurrected.begin(),resurrected.end());
 			if (!computations.empty()) {
 				auto i=computations.begin(),j=n_th_element_or_end(computations.begin(),computations.end(),to_add);
-				assigned_computations.splice(assigned_computations.end(),resurrected);
-				assigned_computations.insert(assigned_computations.end(),i,j);
+				assigned_computations.insert(i,j);
 				computations.erase(i,j);
 			}
 	}
@@ -210,7 +211,7 @@ public:
 		ui->bad_computation(computation,memory_limit);
 		bad.insert(std::move(computation),memory_limit);		
 	}
-	void add_computations_to_do(list<Computation>& assigned_computations, int computations_per_process, megabytes memory_limit) {
+	void add_computations_to_do(AssignedComputations& assigned_computations, int computations_per_process, megabytes memory_limit) {
 		computations_mtx.lock();
 		synchronized_add_computations_to_do(assigned_computations,computations_per_process,memory_limit);
 		computations_mtx.unlock();

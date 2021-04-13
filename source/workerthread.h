@@ -84,7 +84,7 @@ class WorkerThread {
 	int process_id;
 	string process_id_as_string;
 	thread thread_;
-	list<Computation> computations_to_do;	
+	AssignedComputations computations_to_do;	
 	
 	void main_loop(megabytes memory_limit) {
 		while (memory_limit) {
@@ -100,8 +100,9 @@ class WorkerThread {
 			if (computations_to_do.empty()) return;
 			computations_to_do=ComputationRunner::singleton().compute(process_id_as_string,computations_to_do,memory_limit);
 			if (!computations_to_do.empty()) {
-				ComputationRunner::singleton().mark_as_bad(computations_to_do.front(),memory_limit);
-				computations_to_do.pop_front();
+				auto bad=computations_to_do.begin();
+				ComputationRunner::singleton().mark_as_bad(*bad,memory_limit);
+				computations_to_do.erase(bad);
 			}
 			if (ComputationRunner::singleton().large_thread(memory_limit)) return;
 		}	
