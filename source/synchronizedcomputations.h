@@ -163,6 +163,12 @@ protected:
    	return last_process_id;	
 	}
 	virtual int to_valhalla(AbortedComputations& computations) =0;
+	void display_total_computations() {
+		unique_lock<mutex> lck{packed_computations_mtx};
+		int total=computations.size();
+		for (auto& t: packed_computations) total+=t.no_computations();
+		ui->total_computations(total);		
+	}
 public:
 	void attach_user_interface(const UserInterface* interface=&NoUserInterface::singleton()) {
 		if (ui) ui->detach();
@@ -171,14 +177,12 @@ public:
 
 	void mark_as_bad(Computation computation, megabytes memory_limit) {	
 		unique_lock<mutex> lock{bad_mtx};		
-		ui->bad_computation(computation,memory_limit);
 		bad.insert(std::move(computation),memory_limit);		
 	}
 	void add_computations_to_do(AssignedComputations& assigned_computations, int computations_per_process, megabytes memory_limit) {
 		computations_mtx.lock();
 		synchronized_add_computations_to_do(assigned_computations,computations_per_process,memory_limit);
 		computations_mtx.unlock();
-		ui->computations_added_to_thread(computations.size(),assigned_computations.size(),memory_limit);
 	}
 	void flush_bad() {
 		unique_lock<mutex> lock{bad_mtx};

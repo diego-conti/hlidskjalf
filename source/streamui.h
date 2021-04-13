@@ -21,21 +21,12 @@
 #include "ui.h"
 
 class StreamUserInterface : public UserInterface {
+	friend class ThreadStreamUIHandle;
 	ostream& os;
 	mutable mutex lock;
 	mutable int pos=0;
 public:
 	StreamUserInterface(ostream& os) : os{os} {}
-	void computations_added_to_thread(int overall_unassigned_computations, int assigned_computations, megabytes memory_limit) const override {
-		unique_lock<mutex> lck{lock};
-		if (assigned_computations) 
-			os<<"process with "<<memory_limit<<"MB started with "<<assigned_computations<<" computations, ";
-		os<<overall_unassigned_computations<<" unassigned computations remain"<<endl;
-	}	
-	void bad_computation(const Computation& computation, megabytes memory_limit) const override {
-		unique_lock<mutex> lck{lock};
-		os<<"could not complete "<<computation.to_string()<<" with "<<memory_limit<<" MB of memory"<<endl;
-	}
 	void removed_computations_in_db(int computations) const override {
 		unique_lock<mutex> lck{lock};
 		os<<"eliminated "<<computations<<" computations from database"<<endl;
@@ -67,17 +58,48 @@ public:
 		unique_lock<mutex> lck{lock};
 		os<<computation.to_string()<<endl;
 	}
-	void thread_started(megabytes memory) const override {
-		unique_lock<mutex> lck{lock};
-		os<<"thread started with a limit of "<<memory<<"MB"<<endl;
-	}
-	void thread_stopped(megabytes memory) const override {
-		unique_lock<mutex> lck{lock};
-		os<<"stopped thread with a limit of "<<memory<<"MB"<<endl;
-	}
-
 	void detach() const override {
 		unique_lock<mutex> lck{lock};	//block until any ongoing operation is finished
 	}
+
+	unique_ptr<ThreadUIHandle> make_thread_handle(int thread) const override;
 };
+
+class ThreadStreamUIHandle : public ThreadUIHandle {
+	const StreamUserInterface* ui;
+	int thread;
+	void print_thread_id() const {
+		ui->os<<thread<<":\t";
+	}
+public:
+	ThreadStreamUIHandle(const StreamUserInterface* ui, int thread) : ui{ui}, thread{thread} {}
+ 	void computations_added(int assigned_computations, megabytes memory_limit) const override {
+		if (assigned_computations) {
+			unique_lock<mutex> lck{ui->lock};
+			print_thread_id();
+			ui->os<<"process with "<<memory_limit<<"MB started with "<<assigned_computations<<" computations"<<endl; 	
+		}
+ 	}
+	void thread_started(megabytes memory) const override {
+		unique_lock<mutex> lck{ui->lock};
+		print_thread_id();
+		ui->os<<"thread started with a limit of "<<memory<<"MB"<<endl;
+	}
+	void thread_stopped(megabytes memory) const override {
+		unique_lock<mutex> lck{ui->lock};
+		print_thread_id();
+		ui->os<<"stopped thread with a limit of "<<memory<<"MB"<<endl;
+	}
+	void bad_computation(const Computation& computation, megabytes memory_limit) const override {
+		unique_lock<mutex> lck{ui->lock};
+		print_thread_id();
+		ui->os<<"could not complete "<<computation.to_string()<<" with "<<memory_limit<<" MB of memory"<<endl;	
+	}
+};
+
+unique_ptr<ThreadUIHandle> StreamUserInterface::make_thread_handle(int thread) const {
+	return make_unique<ThreadStreamUIHandle>(this, thread);
+}
+
+
 #endif
