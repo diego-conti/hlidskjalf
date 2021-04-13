@@ -2,7 +2,7 @@
 #define WORKER_THREAD_H
 #include "computationrunner.h"
 #include <condition_variable>
-#include <atomic>
+#include "ui.h"
 
 class MemoryManager {
 	mutex suspension_mtx;		//mutex used to lock access to all the data in this class
@@ -24,7 +24,6 @@ class MemoryManager {
 		if (allocated+memory<=limit) {
 			allocated+=memory;
 			suspension_mtx.unlock();
-			ComputationRunner::singleton().get_ui().thread_started(memory);
 			return memory;
 		}
 		else {
@@ -43,7 +42,6 @@ public:
 		++suspended_threads;
 		suspension.notify_one();
 		lck.unlock();
-		ComputationRunner::singleton().get_ui().thread_stopped(n);
 	}
 	megabytes start() {
 		suspension_mtx.lock();
@@ -63,7 +61,6 @@ public:
 				allocated+=request.value();
 				--suspended_threads; 
 				lck.unlock();
-				ComputationRunner::singleton().get_ui().thread_started(request.value());
 				return request.value();
 			}
 		}		
@@ -83,12 +80,15 @@ constexpr class large_tag_t {} large_tag;
 class WorkerThread {
 	int process_id;
 	string process_id_as_string;
+	const UserInterface* ui;
 	thread thread_;
 	AssignedComputations computations_to_do;	
 	
 	void main_loop(megabytes memory_limit) {
 		while (memory_limit) {
+			ui->thread_started(memory_limit);
 			loop_compute(memory_limit);	
+			ui->thread_stopped(memory_limit);
 			MemoryManager::singleton().release(memory_limit);
 			memory_limit=MemoryManager::singleton().wait_and_allocate();
 		}
@@ -110,14 +110,16 @@ class WorkerThread {
 	WorkerThread(const WorkerThread&) =delete;
 	WorkerThread(WorkerThread&&) =delete;
 public:
-	WorkerThread() : 
+	WorkerThread(const UserInterface* ui) : 
 		process_id{ComputationRunner::singleton().assign_id()}, 
 		process_id_as_string{to_string(process_id)},
+		ui{ui},
 		thread_{&WorkerThread::main_loop,this,MemoryManager::singleton().start()}
 	{}
-	WorkerThread(large_tag_t) : 
+	WorkerThread(const UserInterface* ui,large_tag_t) : 
 		process_id{ComputationRunner::singleton().assign_id()}, 
 		process_id_as_string{to_string(process_id)},
+		ui{ui},
 		thread_{&WorkerThread::main_loop,this,MemoryManager::singleton().start_large_thread()}	
 	{}
 	void join() {thread_.join();}
@@ -126,7 +128,7 @@ public:
 class WorkerThreads {
 	vector<unique_ptr<WorkerThread>> threads;
 public:
-	WorkerThreads(const Parameters& parameters) {	 
+	WorkerThreads(const Parameters& parameters, UserInterface* ui) {	 
 		try {
 			ComputationRunner::singleton().init(parameters);
 			MemoryManager::singleton().set_total_limit(parameters.computation_parameters.total_memory_limit);
@@ -137,8 +139,8 @@ public:
 			throw;
 		}
 		for (int i=1;i<parameters.computation_parameters.nthreads;++i)
-			threads.push_back(make_unique<WorkerThread>());
-		threads.push_back(make_unique<WorkerThread>(large_tag));
+			threads.push_back(make_unique<WorkerThread>(ui));
+		threads.push_back(make_unique<WorkerThread>(ui,large_tag));
 	}
 	void join() {
 		for (auto& t: threads) t->join();

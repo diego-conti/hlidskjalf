@@ -22,17 +22,9 @@
 #include "computation.h"
 #include "computationtemplate.h"
 #include "db.h"
-#include "csvreader.h"
-#include <thread>
-#include <mutex>
-#include <future>
+#include "ui.h"
 #include "hash.h"
-
-using std::future;
-using std::thread;
-using std::mutex;
-using std::unique_lock;
-using std::promise;
+#include "csvreader.h"
 
 template<typename Iterator> Iterator n_th_element_or_end(Iterator begin, Iterator end, int n) {
 		if (n==0) return begin;
@@ -44,35 +36,6 @@ template<typename Iterator> Iterator n_th_element_or_end(Iterator begin, Iterato
 //	return std::advance(begin,n,end); 
 }
 
-class UserInterface {
-public:
-  virtual void computations_added_to_thread(int overall_unassigned_computations, int assigned_computations, megabytes memory_limit) const=0;
-  virtual void bad_computation(const Computation& computation, megabytes memory_limit) const =0;
-	virtual void removed_computations_in_db(int computations) const=0;
-	virtual	void removed_precalculated(int computations) const=0;
-  virtual void total_computations(int computations) const =0;
-  virtual void unpacked_computations(int computations) const=0;
-	virtual void aborted_computations(int computations) const=0;
-	virtual void tick() const=0;
-	virtual void print_computation(const Computation& computation) const=0;
-	virtual	void thread_started(megabytes memory) const=0;
-	virtual void thread_stopped(megabytes memory) const=0;
-};
-
-class NoUserInterface : public UserInterface {
-public:
-	void computations_added_to_thread(int overall_unassigned_computations, int assigned_computations, megabytes memory_limit) const override {}
-	void bad_computation(const Computation& computation, megabytes memory_limit) const override  {}
-	void removed_computations_in_db(int computations) const override{}
-	void removed_precalculated(int computations) const override {}
-  void total_computations(int computations) const override{}
-  void unpacked_computations(int computations) const override{}
-	void aborted_computations(int computations) const override {}
-	void tick() const override{}
-	void print_computation(const Computation& computation) const override {}
-	void thread_started(megabytes memory) const override {}
-	void thread_stopped(megabytes memory) const override {}
-};
 
 class AbortedComputations {
 	map<megabytes,list<Computation>> computations_by_memory_limit;
@@ -114,7 +77,7 @@ class SynchronizedComputations {
 	AbortedComputations bad;
 	deque<ComputationTemplate> packed_computations;
 	mutex computations_mtx, bad_mtx, packed_computations_mtx;
-	unique_ptr<UserInterface> ui=make_unique<NoUserInterface>();
+	const UserInterface* ui=&NoUserInterface::singleton();
 
 	void synchronized_add_computations_to_do(AssignedComputations& assigned_computations, int computations_per_process, megabytes memory_limit) {
 			int to_add=max(0,computations_per_process- static_cast<int>(assigned_computations.size()));
@@ -201,9 +164,9 @@ protected:
 	}
 	virtual int to_valhalla(AbortedComputations& computations) =0;
 public:
-	template<typename InterfaceType, typename... Args>
-	void create_user_interface(Args&&... args)  {
-		ui=make_unique<InterfaceType>(std::forward<Args>(args)...);
+	void attach_user_interface(const UserInterface* interface=&NoUserInterface::singleton()) {
+		if (ui) ui->detach();
+		ui=interface;
 	}
 
 	void mark_as_bad(Computation computation, megabytes memory_limit) {	
@@ -223,6 +186,7 @@ public:
 		if (removed) ui->aborted_computations(removed);
 		else ui->tick();
 	}
+	//TODO unpack computations
 	void print_computations() const {
 		for (auto& x: computations) ui->print_computation(x);
 	}
@@ -240,9 +204,6 @@ public:
 			return lock? bad.empty() : false;
 		}
 		else return false;
-	}
-	UserInterface& get_ui() {
-		return *ui;
 	}
 };
 

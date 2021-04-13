@@ -18,7 +18,7 @@
 
 #ifndef STREAM_UI_H
 #define STREAM_UI_H
-#include "synchronizedcomputations.h"
+#include "ui.h"
 
 class StreamUserInterface : public UserInterface {
 	ostream& os;
@@ -76,5 +76,8 @@ public:
 		os<<"stopped thread with a limit of "<<memory<<"MB"<<endl;
 	}
 
+	void detach() const override {
+		unique_lock<mutex> lck{lock};	//block until any ongoing operation is finished
+	}
 };
 #endif

@@ -30,6 +30,9 @@
 #include <optional>
 #include <unordered_set>
 #include <limits>
+#include <thread>
+#include <mutex>
+#include <future>
 
 using std::string;
 using namespace std::literals;
@@ -41,6 +44,12 @@ using std::make_unique;
 using std::optional;
 using std::make_optional;
 using std::nullopt;
+
+using std::mutex;
+using std::unique_lock;
+using std::future;
+using std::thread;
+using std::promise;
 
 using std::max;
 using std::min;

@@ -39,11 +39,11 @@ thread create_flush_thread(future<void>&& terminate_signal) {
 }
 
 
-void launch_threads(const Parameters& parameters) {
+void launch_threads(const Parameters& parameters, UserInterface* ui) {
 	try {
 		promise<void> terminate_signal;	
 		thread flush_thread=create_flush_thread(terminate_signal.get_future());
-		WorkerThreads worker_threads{parameters};
+		WorkerThreads worker_threads{parameters,ui};
 		worker_threads.join();
 		terminate_signal.set_value();
 		flush_thread.join();
@@ -65,15 +65,16 @@ int main(int argv, char** argc) {
 	try {
 		Parameters parameters=command_line_parameters(argv,argc);		
 		cout<<"BEGIN: "<<command_line(argc,argc+argv)<<endl;
-		ComputationRunner::singleton().create_user_interface<StreamUserInterface>(cout);
+		auto ui=make_unique<StreamUserInterface>(cout);
+		ComputationRunner::singleton().attach_user_interface(ui.get());
 		if (parameters.operating_mode==OperatingMode::BATCH_MODE)	{
 			ComputationRunner::singleton().init(parameters);
 			ComputationRunner::singleton().print_computations();
 		}
 		else 
-			launch_threads(parameters);
-	
+			launch_threads(parameters,ui.get());
 		boost::filesystem::remove_all(parameters.communication_parameters.huginn);
+		ComputationRunner::singleton().attach_user_interface();	
 		cout<<"END: "<<command_line(argc,argc+argv)<<endl;	
 		return 0;
 	}
