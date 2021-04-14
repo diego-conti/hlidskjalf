@@ -47,6 +47,7 @@ using std::nullopt;
 
 using std::mutex;
 using std::unique_lock;
+using std::scoped_lock;
 using std::future;
 using std::thread;
 using std::promise;
