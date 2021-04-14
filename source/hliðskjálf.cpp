@@ -19,7 +19,7 @@
 #include "exception.h"
 #include "computationrunner.h"
 #include "parameters.h"
-#include "streamui.h"
+#include "interactiveui.h"
 #include "workerthread.h"
 
 using namespace std;
@@ -28,7 +28,7 @@ using namespace std;
 void loop_flush_bad(future<void> terminateFuture) {
 	future_status status;
 	do {
-		status=terminateFuture.wait_for(std::chrono::seconds(10));
+		status=terminateFuture.wait_for(std::chrono::seconds(1));
 		ComputationRunner::singleton().check_memory_and_flush_bad();
 	} while (status!=future_status::ready);
 }
@@ -65,7 +65,7 @@ int main(int argv, char** argc) {
 	try {
 		Parameters parameters=command_line_parameters(argv,argc);		
 		cout<<"BEGIN: "<<command_line(argc,argc+argv)<<endl;
-		auto ui=make_unique<StreamUserInterface>(cout);
+		auto ui=make_unique<InteractiveUserInterface>();
 		ComputationRunner::singleton().attach_user_interface(ui.get());
 		if (parameters.operating_mode==OperatingMode::BATCH_MODE)	{
 			ComputationRunner::singleton().init(parameters);

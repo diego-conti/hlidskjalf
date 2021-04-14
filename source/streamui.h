@@ -62,7 +62,7 @@ public:
 		unique_lock<mutex> lck{lock};	//block until any ongoing operation is finished
 	}
 
-	unique_ptr<ThreadUIHandle> make_thread_handle(int thread) const override;
+	unique_ptr<ThreadUIHandle> make_thread_handle(int thread) override;
 };
 
 class ThreadStreamUIHandle : public ThreadUIHandle {
@@ -97,7 +97,7 @@ public:
 	}
 };
 
-unique_ptr<ThreadUIHandle> StreamUserInterface::make_thread_handle(int thread) const {
+unique_ptr<ThreadUIHandle> StreamUserInterface::make_thread_handle(int thread)  {
 	return make_unique<ThreadStreamUIHandle>(this, thread);
 }
 

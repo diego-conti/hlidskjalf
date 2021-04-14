@@ -17,8 +17,6 @@ class MemoryManager {
 	optional<megabytes> to_request() const {
 		auto max_request=limit-allocated;
 		auto lowest=max(ComputationRunner::singleton().lowest_effective_memory_limit(),base_memory_limit);
-		cout<<"lowest "<<lowest<<endl;
-		cout<<"finished?"<< std::boolalpha<<finished()<<endl;
 		if (max_request<=lowest) return nullopt;
 		if (suspended_threads==1) return max_request;
 		if (lowest>limit/3) return max_request;	//there is no room for another thread, so give all memory to this one
@@ -119,13 +117,13 @@ class WorkerThread {
 	WorkerThread(const WorkerThread&) =delete;
 	WorkerThread(WorkerThread&&) =delete;
 public:
-	WorkerThread(const UserInterface* ui) : 
+	WorkerThread(UserInterface* ui) : 
 		process_id{ComputationRunner::singleton().assign_id()}, 
 		process_id_as_string{to_string(process_id)},
 		ui_handle{ui->make_thread_handle(process_id)},
 		thread_{&WorkerThread::main_loop,this,MemoryManager::singleton().start()}
 	{}
-	WorkerThread(const UserInterface* ui,large_tag_t) : 
+	WorkerThread(UserInterface* ui,large_tag_t) : 
 		process_id{ComputationRunner::singleton().assign_id()}, 
 		process_id_as_string{to_string(process_id)},
 		ui_handle{ui->make_thread_handle(process_id)},
