@@ -93,19 +93,23 @@ public:
 		computations.insert(computation_instances.begin(),computation_instances.end());	
 		return computation_instances.size();
 	}
-	void eliminate_computations_in_db(const SimpleDatabaseView& db_view, const set<int>& group_orders) {
+	int eliminate_computations_in_db(const SimpleDatabaseView& db_view, const set<int>& group_orders) {
+		int size=computations.size();
 		auto eliminate_function=[this] (int primary_input, const FieldsInDB& secondary_inputs, const FieldsInDB& data) {
 				Computation computation{primary_input,static_cast<CSVLine>(secondary_inputs)};
 				computations.erase(computation);			
 		};
 		db_view.iterate_through_entries(eliminate_function,group_orders);
+		return size-computations.size();
 	}
-	void eliminate_precalculated(const string& output_dir,const CSVSchema& schema) {
+	int eliminate_precalculated(const string& output_dir,const CSVSchema& schema) {
+		int size=computations.size();
     for (auto& x : boost::filesystem::directory_iterator(output_dir))
     	if (boost::filesystem::is_regular_file(x)) {
 				std::ifstream f{x.path().native()};
     		eliminate_computations<CSVReader>(f,computations,schema);
-    	}	
+    	}
+		return size-computations.size();    		
 	}
 	void assign (int to_add, AssignedComputations& assigned_computations) {	
 		auto i=computations.begin(),j=n_th_element_or_end(computations.begin(),computations.end(),to_add);
@@ -168,22 +172,20 @@ protected:
 	void load_computations(const string& input_file,const CSVSchema& schema, int max_computations_in_template) {
 		ifstream s{input_file};
 		packed_computations.load(s,schema,max_computations_in_template);
-		ui->total_computations(packed_computations.size());
+		ui->loaded_computations(input_file,packed_computations.size(), computations.size(),bad.size());
 	}
 //unpack computation templates into computations and remove those already processed
 	void unpack_computations_and_remove_already_processed(int min_threshold, int max_threshold, const optional<SimpleDatabaseView>& db_view,const string& output_dir,const CSVSchema& schema) {	
 		auto lock=computations.unique_lock();
 		while (computations.size()<min_threshold && !packed_computations.empty()) {
 			auto primary_ids=packed_computations.unpack(max_threshold, computations);
-			ui->unpacked_computations(computations.size());
+			ui->unpacked_computations(packed_computations.size(), computations.size(),bad.size());
 			if (db_view) {
-				int size=computations.size();
-				computations.eliminate_computations_in_db(db_view.value(),primary_ids);
-				int eliminated=size-computations.size();
-				ui->removed_computations_in_db(eliminated);
+				int eliminated=computations.eliminate_computations_in_db(db_view.value(),primary_ids);
+				ui->removed_computations_in_db(eliminated,packed_computations.size(), computations.size(),bad.size());
 			}
-			computations.eliminate_precalculated(output_dir,schema);
-	    ui->removed_precalculated(computations.size());
+			int eliminated=computations.eliminate_precalculated(output_dir,schema);
+	    ui->removed_precalculated(eliminated,packed_computations.size(), computations.size(),bad.size());
 		}
 	}
 	int last_used_id(const string& output_dir) const {
@@ -199,9 +201,6 @@ protected:
    	return last_process_id;	
 	}
 	virtual int to_valhalla(AbortedComputations& computations) =0;
-	void display_total_computations() {
-		ui->total_computations(computations.size()+packed_computations.size()+bad.size());
-	}
 public:
 	void attach_user_interface(const UserInterface* interface=&NoUserInterface::singleton()) {
 		if (ui) ui->detach();
@@ -214,15 +213,17 @@ public:
 			int to_add=max(0,computations_per_process- static_cast<int>(assigned_computations.size()));
 			auto resurrected=bad.extract_within_memory_limit(memory_limit, to_add);
 			to_add-=resurrected.size();
+			ui->resurrected(resurrected.size(),packed_computations.size(), computations.size(),bad.size());
 			assigned_computations.insert(resurrected.begin(),resurrected.end());
 			if (!computations.empty()) {
 				auto lock=computations.unique_lock();
 				computations.assign(to_add,assigned_computations);
 			}
+			ui->assigned_computations(assigned_computations.size(),packed_computations.size(), computations.size(),bad.size());
 	}
 	void flush_bad() {
 		int removed=to_valhalla(bad);
-		if (removed) ui->aborted_computations(removed);
+		if (removed) ui->aborted_computations(removed,packed_computations.size(), computations.size(),bad.size());
 		else ui->tick();
 	}
 	void print_computations() const {

@@ -22,10 +22,11 @@
 #include <string>
 #include <vector>
 #include <list>
+#include <array>
 #include <set>
+#include <map>
 #include <deque>
 #include <iostream>
-#include <map>
 #include <memory>
 #include <optional>
 #include <unordered_set>
@@ -57,6 +58,7 @@ using std::min;
 
 using std::vector;
 using std::list;
+using std::array;
 using std::set;
 using std::unordered_set;
 using std::hash;

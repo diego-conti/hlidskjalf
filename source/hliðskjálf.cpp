@@ -28,7 +28,8 @@ using namespace std;
 void loop_flush_bad(future<void> terminateFuture) {
 	future_status status;
 	do {
-		status=terminateFuture.wait_for(std::chrono::seconds(1));
+		status=terminateFuture.wait_for(std::chrono::milliseconds(1000));
+		this_thread::sleep_for(std::chrono::milliseconds(1000));
 		ComputationRunner::singleton().check_memory_and_flush_bad();
 	} while (status!=future_status::ready);
 }

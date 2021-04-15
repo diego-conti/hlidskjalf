@@ -118,7 +118,6 @@ public:
 			int min_threshold=parameters.computation_parameters.computations_per_process*parameters.computation_parameters.nthreads;
 			if (no_computations()<min_threshold) {
 				unpack_computations_and_remove_already_processed(parameters.computation_parameters.computations_per_process,COMPUTATIONS_TO_STORE_IN_MEMORY, create_db_view(), parameters.script_parameters.output_dir, schema);	
-				display_total_computations();
 			}
 			auto computations_per_process=no_computations_to_assign(memory_limit);
 			if (computations_per_process==0 && assigned_computations.empty()) computations_per_process=1;
