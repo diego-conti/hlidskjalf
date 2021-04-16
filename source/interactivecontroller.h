@@ -11,7 +11,10 @@ public:
 	}
 	void on_key_pressed(int keyCode) override {
 		switch (keyCode) {
-			case 'q' : throw 0; break;
+			case 'q' : 
+				ui->loaded_computations("terminating");
+				ComputationRunner::singleton().terminate(); 
+				break;
 			case 'l': 
 				ComputationRunner::singleton().load_computations(ui->get_filename());
 				break;

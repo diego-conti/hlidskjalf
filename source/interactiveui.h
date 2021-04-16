@@ -89,11 +89,9 @@ public:
 	string get_filename() override {
 		input_window<<clear<<"Filename: "<<refresh;
 		auto filename=screen.get_string(input_window);
-		auto input_file=boost::filesystem::path(filename);			
-		while (!boost::filesystem::exists(input_file) || !boost::filesystem::is_regular_file(input_file)) {
+		while (file_exists(filename)) {
 			input_window<<clear<<filename<<" does not exist; enter new filename:"<<refresh;
 			filename=screen.get_string(input_window);
-			input_file=boost::filesystem::path(filename);						
 		}
 		print_key_mappings();	
 		return filename;

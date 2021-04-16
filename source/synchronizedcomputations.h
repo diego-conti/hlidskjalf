@@ -82,6 +82,7 @@ public:
 		for (auto & p:computations_by_memory_limit) if (p.second.size()) result.emplace_back(p.first,p.second.size());
 		return result;		
 	}
+	void clear() {computations_by_memory_limit.clear(); size_=0;}
 	int size() const {return size_;}
 	bool empty() const {
 		return size_==0;
@@ -108,10 +109,10 @@ public:
 		db_view.iterate_through_entries(eliminate_function,group_orders);
 		return size-computations.size();
 	}
-	int eliminate_precalculated(const string& output_dir,const CSVSchema& schema) {
+	int eliminate_precalculated(const string& output_dir,const CSVSchema& schema, const atomic<bool>& terminate) {
 		int size=computations.size();
     for (auto& x : boost::filesystem::directory_iterator(output_dir))
-    	if (boost::filesystem::is_regular_file(x)) {
+    	if (!terminate && boost::filesystem::is_regular_file(x)) {
 				std::ifstream f{x.path().native()};
     		eliminate_computations<CSVReader>(f,computations,schema);
     	}
@@ -167,6 +168,10 @@ public:
 			packed_computations.pop_front();
 		}
 		return primary_ids;
+	}
+	void clear() {
+		unique_lock<mutex> lock{mtx};
+		packed_computations.clear();
 	}	
 };
 
@@ -176,10 +181,18 @@ class SynchronizedComputations {
 	PackedComputations packed_computations;
 	UserInterface* ui=&NoUserInterface::singleton();
 	int abandoned=0;
+	atomic<bool> should_terminate;
 
 	void synchronized_add_computations_to_do(AssignedComputations& assigned_computations, int computations_per_process, megabytes memory_limit) {
 	}
 protected:
+	void terminate() {
+		should_terminate=true;
+		packed_computations.clear();
+		bad.clear();
+		auto lock=computations.unique_lock();
+		computations.clear();
+	}
 //to be called at initialization or when a new input_file is provided through the UI
 	void load_computations(const string& input_file,const CSVSchema& schema, int max_computations_in_template) {
 		ifstream s{input_file};
@@ -189,14 +202,14 @@ protected:
 //unpack computation templates into computations and remove those already processed
 	void unpack_computations_and_remove_already_processed(int min_threshold, int max_threshold, const optional<SimpleDatabaseView>& db_view,const string& output_dir,const CSVSchema& schema) {	
 		auto lock=computations.unique_lock();
-		while (computations.size()<min_threshold && !packed_computations.empty()) {
+		while (computations.size()<min_threshold && !packed_computations.empty() && !should_terminate) {
 			auto primary_ids=packed_computations.unpack(max_threshold, computations);
 			ui->unpacked_computations();
 			if (db_view) {
 				int eliminated=computations.eliminate_computations_in_db(db_view.value(),primary_ids);
 				ui->removed_computations_in_db(eliminated);
 			}
-			int eliminated=computations.eliminate_precalculated(output_dir,schema);
+			int eliminated=computations.eliminate_precalculated(output_dir,schema,should_terminate);
 	    ui->removed_precalculated(eliminated);
 		}
 	}
@@ -254,7 +267,7 @@ public:
 	}
 	bool finished() {
 		auto result=computations.empty() && packed_computations.empty() && bad.empty();
-		return result;
+		return result || should_terminate;
 	}
 };
 

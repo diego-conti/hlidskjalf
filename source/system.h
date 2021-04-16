@@ -62,4 +62,13 @@ void create_dir_if_needed(const boost::filesystem::path& path) {
 		throw FileException(path.native()," is not a directory");				
 }
 
+bool file_exists(const string& filename) {
+	try {
+		auto input_file=boost::filesystem::path(filename);			
+		return boost::filesystem::exists(input_file) && boost::filesystem::is_regular_file(input_file);
+	}
+	catch (...) {
+		return false;
+	}
+}
 #endif

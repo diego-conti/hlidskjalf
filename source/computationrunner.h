@@ -24,9 +24,28 @@
 constexpr int COMPUTATIONS_TO_STORE_IN_MEMORY=1024*1024;
 
 
+class Processes {
+	mutex mtx;
+	list<boost::process::child*> processes;
+public:
+	void add(boost::process::child* child) {
+		unique_lock<mutex> lck{mtx};
+		processes.push_back(child);		
+	}
+	void remove(boost::process::child* child) {
+		unique_lock<mutex> lck{mtx};
+		processes.remove(child);		
+	}	
+	void terminate() {		
+		unique_lock<mutex> lck{mtx};
+		for (auto child: processes) child->terminate();
+	}	
+};
+
 class MagmaRunner {
 	string magma_script;
 	string magma_path;	
+	Processes processes;
 public:
 	MagmaRunner(const string& magma_script) : magma_script{magma_script}, magma_path{::magma_path()} {}
 
@@ -40,16 +59,21 @@ public:
 		return script_version;
 	}
 
-	void invoke_magma_script(const string& process_id,const AssignedComputations& computations,const Parameters& parameters, megabytes memory_limit) const {
+	void invoke_magma_script(const string& process_id,const AssignedComputations& computations,const Parameters& parameters, megabytes memory_limit) {
 		auto data_filename=parameters.communication_parameters.huginn+"/"+process_id+".data";
 		ofstream file{data_filename,std::ofstream::trunc};
 		for (auto x: computations) file<<x.to_string()<<endl;
 		file.close();
-		boost::process::child child{magma_path+" -b "+parameters.script_parameters.script_invocation(process_id,data_filename, memory_limit), boost::process::std_out > boost::process::null};
-		child.wait();	
-	//if the program is terminated, the destructor of child is invoked and the child process is terminated
+		auto child=boost::process::child{magma_path+" -b "+parameters.script_parameters.script_invocation(process_id,data_filename, memory_limit), boost::process::std_out > boost::process::null};
+		processes.add(&child);
+		child.wait();
+		processes.remove(&child);
+	}
+	void terminate_all() {
+		processes.terminate();
 	}
 };
+
 
 //TODO replace inheritance with a data member
 class ComputationRunner : public SynchronizedComputations {
@@ -146,10 +170,17 @@ public:
 		return ++last_process_id;
 	}
 	
+	void terminate() {
+		SynchronizedComputations::terminate();
+		magma_runner->terminate_all();
+	}
+	
 	AssignedComputations compute(const string& process_id, AssignedComputations computations, megabytes memory_limit) const {
-		magma_runner->invoke_magma_script(process_id, computations,parameters,memory_limit);
 		auto output_filename=parameters.script_parameters.output_dir+"/"+process_id+parameters.script_parameters.work_output_extension;
+		auto size=file_exists(output_filename)? boost::filesystem::file_size(output_filename) : 0;
+		magma_runner->invoke_magma_script(process_id, computations,parameters,memory_limit);		
 		ifstream result_file{output_filename};	
+		result_file.seekg(size);
 		eliminate_computations<CSVReader>(result_file,computations,schema);
 		return computations;
 	}

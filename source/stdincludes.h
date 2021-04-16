@@ -34,6 +34,7 @@
 #include <thread>
 #include <mutex>
 #include <future>
+#include <atomic>
 
 using std::string;
 using namespace std::literals;
@@ -52,6 +53,7 @@ using std::scoped_lock;
 using std::future;
 using std::thread;
 using std::promise;
+using std::atomic;
 
 using std::max;
 using std::min;
