@@ -10,10 +10,12 @@
 struct Dimensions {
 	int width,height;
 };
+inline bool operator==(Dimensions D1, Dimensions D2) {return D1.width==D2.width && D1.height ==D2.height;}
 
 struct Position {
 	int x,y;
 };
+inline bool operator==(Position D1, Position D2) {return D1.x==D2.x && D1.y ==D2.y;}
 
 class Window;
 
@@ -29,6 +31,7 @@ public:
 	void unlock();
 	template<typename  T> 
 	void append_to_buffer(T&& s);
+	string get_string();
 	Window& window() {return *ptr;}
 	bool operator==(const WindowHandle& other) const {return ptr==other.ptr;}
 };
@@ -84,6 +87,11 @@ public:
 		content.str(string{});
 		invalidate();
 	}
+	string get_string() {
+		char buffer[1024];
+		wgetnstr(window,buffer,1024);
+		return buffer;
+	}	
 	static WindowHandle create_window(Dimensions size, Position position) {
 		return std::make_shared<Window>(size,position,Construct{});
 	}
@@ -93,6 +101,8 @@ void WindowHandle::clear() {ptr->clear();}
 void WindowHandle::refresh() const {ptr->refresh();}
 void WindowHandle::lock() {ptr->lock();}
 void WindowHandle::unlock() {ptr->unlock();}
+string WindowHandle::get_string() {return ptr->get_string();}
+
 template<typename  T> 
 void WindowHandle::append_to_buffer(T&& s) {
 	ptr->append_to_buffer(std::forward<T>(s));
@@ -108,6 +118,7 @@ WindowHandle& operator<<(WindowHandle& window, T&& t) {
 void append(WindowHandle& window) {window.lock();}
 void clear(WindowHandle& window) {window.lock(); window.clear();}
 void release(WindowHandle& window) {window.unlock();}
+void refresh(WindowHandle& window) {window.unlock(); window.refresh();}
 
 typedef void (* WindowManipulator)(WindowHandle&);
 

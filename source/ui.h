@@ -13,6 +13,14 @@ public:
 	virtual ~ThreadUIHandle() =default;
 };
 
+
+class Controller {
+public:
+	virtual void on_key_pressed(int keyCode)=0;
+	virtual void on_screen_size_changed(int width, int height)=0;	
+	virtual ~Controller()=default;
+};
+
 class UserInterface {
 public:
 	virtual void loaded_computations(const string& input_file) =0;
@@ -25,9 +33,9 @@ public:
 	virtual void tick(int packed_computations, int unpacked_computations, int bad, int abandoned)=0;
 	virtual void print_computation(const Computation& computation) =0;
 	virtual void update_bad(const vector<pair<megabytes,int>>& memory_limits)=0;
-	
-	virtual void detach() const =0;
-		
+	virtual void display_memory_limit(pair<megabytes,megabytes> memory)=0;
+	virtual string get_filename() =0;	
+	virtual void attach_controller(Controller* controller=nullptr)=0;
 	virtual unique_ptr<ThreadUIHandle> make_thread_handle(int thread) =0;	//the handle becomes invalid when the UI is destroyed
 	virtual ~UserInterface() =default;
 };
@@ -54,7 +62,10 @@ public:
 	void tick(int packed_computations, int unpacked_computations, int bad, int abandoned) override {}
 	void print_computation(const Computation& computation) override {}
 	void update_bad(const vector<pair<megabytes,int>>& memory_limits) override {}
-	void detach() const override {}
+	void display_memory_limit(pair<megabytes,megabytes> memory) override {}
+	string get_filename() override {return {};}
+
+	void attach_controller(Controller* controller=nullptr) override {}
 	unique_ptr<ThreadUIHandle> make_thread_handle(int thread) {return make_unique<ThreadNoUIHandle>();}
 	
 	static NoUserInterface& singleton() {

@@ -21,30 +21,36 @@
 #include "ui.h"
 #include "tui/layout.h"
 
-class Controller {
-public:
-	virtual void onKeyPressed(int keyCode)=0;
-	virtual void onScreenSizeChanged(Dimensions dimensions)=0;	
-};
 
 class InteractiveUserInterface : public UserInterface {
 	friend class ThreadInteractiveUIHandle;
 	Screen screen;
 	VerticalLayout layout;
-	WindowHandle status_window, msg_window, bad_window;
+	WindowHandle status_window, msg_window, bad_window, memory_window, input_window;
 	Controller* controller;
 	void print_status(int packed_computations, int unpacked_computations, int bad, int abandoned) {
 		auto overall_computations=packed_computations+unpacked_computations+bad;
-		status_window<<clear<<"Packed computations:\t"<<packed_computations<<"\tUnpacked computations:\t"<<unpacked_computations<<"\tAborted computations to retry:\t"<<bad<<		"\tTotal unassigned computations:\t"<<overall_computations<<"\tAbandoned computations:"<<abandoned<<release;
+		status_window<<clear<<"Packed computations: "<<packed_computations<<"\tUnpacked computations: "<<unpacked_computations<<"\tAborted computations to retry: "<<bad<<		"\tTotal unassigned computations: "<<overall_computations<<"\tAbandoned computations: "<<abandoned<<release;
+	}
+	void print_key_mappings() {
+		input_window<<clear<<"(press Q to quit, L to load new computations, arrow up/down to change total memory limit, PGUP/PGDOWN to change perthread lower memory limit)"<<release;	
 	}
 public:
-	InteractiveUserInterface() : layout{screen}, status_window{layout.create_window(1,WindowType::CHILD)}, msg_window{layout.create_window(1,WindowType::CHILD)},bad_window{layout.create_window(1,WindowType::CHILD)} {
-		auto header=layout.create_window(2,WindowType::CHILD);
-		header<<clear<<"(press Q to quit)\nTHREAD\tMEMORY"<<release;
+	InteractiveUserInterface() : layout{screen} {
+ 		status_window=layout.create_window(1,WindowType::CHILD);
+ 		msg_window=layout.create_window(1,WindowType::CHILD);
+		auto bad_and_memory_windows=layout.create_windows(1,WindowType::CHILD,WindowType::CHILD);
+		bad_window=bad_and_memory_windows[0];
+		memory_window=bad_and_memory_windows[1];
+		input_window=layout.create_window(1,WindowType::CHILD);
+		auto header=layout.create_window(1,WindowType::CHILD);
+		header<<clear<<"THREAD\tMEMORY"<<release;
+		print_key_mappings();
 	}
 	void update_bad(const vector<pair<megabytes,int>>& memory_limits) override {
 		bad_window<<clear<<"bad:\t";
-		for (auto& p: memory_limits) bad_window<<p.first<<"MB:"<<p.second<<" ";
+		if (memory_limits.empty()) bad_window<<"none";
+		else for (auto& p: memory_limits) bad_window<<p.first<<"MB:"<<p.second<<" ";
 		bad_window<<release;
 	}
 	void loaded_computations(const string& input_file) override {
@@ -70,14 +76,32 @@ public:
 	}
 	void tick(int packed_computations, int unpacked_computations, int bad, int abandoned) override {
 		print_status(packed_computations,unpacked_computations,bad, abandoned);
-		if (screen.user_has_pressed('q')) throw 0;
+		optional<int> key_pressed;
+		if (controller) 
+			while ((key_pressed=screen.key_pressed()))
+				controller->on_key_pressed(key_pressed.value());
+		if (screen.size_changed()) controller->on_screen_size_changed(screen.dimensions().width, screen.dimensions().height);
 		screen.refresh();
 	}
-	
-	void print_computation(const Computation& computation) override {
+	void attach_controller(Controller* controller=nullptr) override {
+		this->controller=controller;
+	}	
+	string get_filename() override {
+		input_window<<clear<<"Filename: "<<refresh;
+		auto filename=screen.get_string(input_window);
+		auto input_file=boost::filesystem::path(filename);			
+		while (!boost::filesystem::exists(input_file) || !boost::filesystem::is_regular_file(input_file)) {
+			input_window<<clear<<filename<<" does not exist; enter new filename:"<<refresh;
+			filename=screen.get_string(input_window);
+			input_file=boost::filesystem::path(filename);						
+		}
+		print_key_mappings();	
+		return filename;
 	}
-	void detach() const override {}
-
+	void print_computation(const Computation& computation) override {	}
+	void display_memory_limit(pair<megabytes,megabytes> memory) override {
+		memory_window<<clear<<"Total limit: "<<memory.first<<"MB\tLower limit per thread: "<<memory.second<<"MB"<<release;
+	}
 	unique_ptr<ThreadUIHandle> make_thread_handle(int thread) override;
 };
 

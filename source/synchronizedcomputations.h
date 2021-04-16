@@ -215,8 +215,8 @@ protected:
 	virtual int to_valhalla(AbortedComputations& computations) =0;
 public:
 	void attach_user_interface(UserInterface* interface=&NoUserInterface::singleton()) {
-		if (ui) ui->detach();
 		ui=interface;
+		ui->update_bad(bad.summary());
 	}
 	void mark_as_bad(Computation computation, megabytes memory_limit) {	
 		bad.insert(std::move(computation),memory_limit);		

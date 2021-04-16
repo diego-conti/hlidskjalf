@@ -20,6 +20,7 @@
 #include "computationrunner.h"
 #include "parameters.h"
 #include "interactiveui.h"
+#include "interactivecontroller.h"
 #include "streamui.h"
 #include "workerthread.h"
 
@@ -82,13 +83,19 @@ unique_ptr<UserInterface> create_ui(const Parameters& parameters) {
 	else return  make_unique<InteractiveUserInterface>();
 }
 
+unique_ptr<Controller> create_controller(UserInterface* ui) {
+	return make_unique<InteractiveController>(ui);
+}
+
 int create_ui_and_run(const Parameters& parameters, const string& command_line) {
 	cout<<"BEGIN: "<<command_line<<endl;
 	auto ui=create_ui(parameters);
+	auto controller=create_controller(ui.get());
 	ComputationRunner::singleton().attach_user_interface(ui.get());
 	auto return_code=run(parameters,ui.get());
 	ComputationRunner::singleton().attach_user_interface();
 	boost::filesystem::remove_all(parameters.communication_parameters.huginn);
+	delete controller.release();
 	delete ui.release();
 	cout<<(return_code? "TERMINATED: " : "END: ");
 	cout<<command_line<<endl;	

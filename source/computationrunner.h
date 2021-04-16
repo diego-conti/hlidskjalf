@@ -51,6 +51,7 @@ public:
 	}
 };
 
+//TODO replace inheritance with a data member
 class ComputationRunner : public SynchronizedComputations {
 	static constexpr int NO_ID=-1;
 	Parameters parameters;
@@ -105,8 +106,11 @@ public:
 		magma_runner=make_unique<MagmaRunner>(parameters.script_parameters.script);
 		script_version=magma_runner->script_version();
 		verify_files_exist(parameters);
-		load_computations(parameters.input_parameters.input_file,schema,COMPUTATIONS_TO_STORE_IN_MEMORY/2);
+		load_computations(parameters.input_parameters.input_file);
 		last_process_id=SynchronizedComputations::last_used_id(parameters.script_parameters.output_dir);
+	}
+	void load_computations(const string& file) {
+		SynchronizedComputations::load_computations(file,schema,COMPUTATIONS_TO_STORE_IN_MEMORY/2);
 	}
 	
 	static ComputationRunner& singleton() {

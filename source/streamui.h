@@ -62,14 +62,18 @@ public:
 		os.flush();
 		pos = (pos + 1) % 4;
 	}	
+	void attach_controller(Controller* controller=nullptr) override {}
 	void update_bad(const vector<pair<megabytes,int>>& memory_limits) override {}
 	unique_ptr<ThreadUIHandle> make_thread_handle(int thread);
 	void print_computation(const Computation& computation) override {
 		unique_lock<mutex> lck{lock};
 		os<<computation.to_string()<<endl;
 	}
-	void detach() const override {
-		unique_lock<mutex> lck{lock};	//block until any ongoing operation is finished
+	void display_memory_limit(pair<megabytes,megabytes> memory) override {
+		os<<"Total limit: "<<memory.first<<"MB\tLower limit per thread: "<<memory.second<<"MB"<<endl;
+	}	
+	string get_filename() override {
+		return {};
 	}
 	~StreamUserInterface() {
 		os<<"disconnecting UI"<<endl;
