@@ -68,6 +68,7 @@ enum class OperatingMode {
 
 struct Parameters {
 	OperatingMode operating_mode=OperatingMode::NORMAL;
+	bool console;
 	ScriptParameters script_parameters;
 	InputParameters input_parameters;
 	ComputationParameters computation_parameters;
@@ -94,6 +95,7 @@ Parameters command_line_parameters(int argv, char** argc) {
 	desc.add_options()
     ("help", "produce help message")
     ("batch-mode", "print out a list of computations to do, without launching any actual calculation")
+    ("console", "use console output rather than ncurses TUI")
 
 			//script parameters	
 		("script", po::value<string>(), "work script filename")		
@@ -131,6 +133,7 @@ Parameters command_line_parameters(int argv, char** argc) {
 	
 	Parameters result;
 	if (vm.count("batch-mode")) result.operating_mode=OperatingMode::BATCH_MODE;
+	result.console=vm.count("console");
 	result.script_parameters={vm["script"].as<string>(), output_dir,vm["flags"].as<string>(), vm["extension"].as<string>()};
 	result.input_parameters={vm["computations"].as<string>(), vm["schema"].as<string>(),vm["db"].as<string>()};
 	result.computation_parameters={vm["nthreads"].as<int>(), vm["workload"].as<int>(),  vm["free-memory"].as<int>()*1024*1024, vm["memory"].as<int>(), vm["total-memory"].as<int>()*1024};

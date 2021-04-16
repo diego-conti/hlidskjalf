@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 #include "screenlock.h"
+#include <sstream>
 
 struct Dimensions {
 	int width,height;
@@ -23,20 +24,25 @@ class WindowHandle {
 public:	
 	WindowHandle()=default;
 	void refresh() const;
-	void clear() const;
-	void print(const std::string& s) const;	
-	void print(const char* s) const;
-	template<typename T> void print(const T& t) const{
-		print(std::to_string(t));
-	}
+	void clear();
+	void lock();
+	void unlock();
+	template<typename  T> 
+	void append_to_buffer(T&& s);
 	Window& window() {return *ptr;}
 	bool operator==(const WindowHandle& other) const {return ptr==other.ptr;}
 };
 
 
-//output to a window is not synchronized. The manipulators clear and refresh/release do the synchronization.
+//output is performed only by one thread. window creation is done by any thread but synchronized with screenlock.
+//writing to a window only puts text in an interal buffer which is protected by a mutex
+//invoking refresh (from the UI thread) puts the buffer in the ncurses window and refreshes it
+//to consider: why use ncurses windows?
+//do I need invalidation?
 class Window {
 	WINDOW* window=nullptr;	
+	std::stringstream content;
+	mutable std::mutex mtx;	
 	mutable bool valid;
 	Window(const Window&)=delete;
 	Window(Window&& other) {
@@ -52,54 +58,60 @@ public:
 			window=newwin(size.height,size.width,position.y,position.x);
 			invalidate();
 	}
-	Window()=default;
-	void print(const char* s) const {
-		wprintw(window,s);
-		invalidate();
-	}
-	void print(const std::string& s) const {
-		for (char c: s)
-	    waddch(window,c);
-		invalidate();
-	}
-	void refresh() const {
-		if (!valid) {
-			wrefresh(window);
-			valid=true;
-		}
-	}
-	void clear() const {
-		wclear(window);
-		invalidate();
-	}
+	Window()=default;	
 	~Window() {
 		auto lock=GlobalTuiLock::unique_lock();
 		if (window) delwin(window);
 	}
+	template<typename  T> 
+	void append_to_buffer(T&& s) {
+		content<<s;
+		invalidate();
+	}
+	void lock() {mtx.lock();}
+	void unlock() {mtx.unlock();}	
+//should only be called by UI thread
+	void refresh() const {
+		if (!valid) {
+			std::unique_lock<std::mutex> lock{mtx};
+			werase(window);
+			wprintw(window,content.str().c_str());
+			wrefresh(window);
+			valid=true;
+		}
+	}
+	void clear() {
+		content.str(string{});
+		invalidate();
+	}
 	static WindowHandle create_window(Dimensions size, Position position) {
 		return std::make_shared<Window>(size,position,Construct{});
 	}
-	bool is_valid() const {return valid;}	
 };
 
+void WindowHandle::clear() {ptr->clear();}
 void WindowHandle::refresh() const {ptr->refresh();}
-void WindowHandle::clear() const {ptr->clear();}
-void WindowHandle::print(const std::string& s) const {ptr->print(s);}	
-void WindowHandle::print(const char* s) const {ptr->print(s);}	
+void WindowHandle::lock() {ptr->lock();}
+void WindowHandle::unlock() {ptr->unlock();}
+template<typename  T> 
+void WindowHandle::append_to_buffer(T&& s) {
+	ptr->append_to_buffer(std::forward<T>(s));
+}
+
 
 template<typename T>
-const WindowHandle& operator<<(const WindowHandle& window, T&& t) {
-	window.print(t);
+WindowHandle& operator<<(WindowHandle& window, T&& t) {
+	window.append_to_buffer(t);
 	return window;
 }
 
-void refresh(const WindowHandle& window) {window.refresh(); GlobalTuiLock::unlock();}
-void clear(const WindowHandle& window) {GlobalTuiLock::lock(); window.clear();}
-void release(const WindowHandle& window) {GlobalTuiLock::unlock();}
+void append(WindowHandle& window) {window.lock();}
+void clear(WindowHandle& window) {window.lock(); window.clear();}
+void release(WindowHandle& window) {window.unlock();}
 
-typedef void (* WindowManipulator)(const WindowHandle&);
+typedef void (* WindowManipulator)(WindowHandle&);
 
-const WindowHandle& operator<<(const WindowHandle& window, WindowManipulator f) {
+WindowHandle& operator<<(WindowHandle& window, WindowManipulator f) {
 	f(window);
 	return window;
 }

@@ -24,45 +24,53 @@ class StreamUserInterface : public UserInterface {
 	friend class ThreadStreamUIHandle;
 	ostream& os;
 	mutable mutex lock;
-	mutable int pos=0;
+	int pos=0;
 public:
 	StreamUserInterface(ostream& os) : os{os} {}
-	void removed_computations_in_db(int computations) const override {
+	void loaded_computations(const string& input_file) override {
 		unique_lock<mutex> lck{lock};
-		os<<"eliminated "<<computations<<" computations from database"<<endl;
-	}	
-	void removed_precalculated(int computations) const override {
-		unique_lock<mutex> lck{lock};
-		os<<computations<<" computations remain after eliminating those already calculated"<<endl;
-	}	
-	void total_computations(int computations) const override {
-		unique_lock<mutex> lck{lock};
-		os<<"Total number of computations loaded: "<<computations<<endl;	
-	}	
-	void unpacked_computations(int computations) const override {
-		unique_lock<mutex> lck{lock};
-		os<<"processing "<<computations<<" computations"<<endl;	
-	}	
-	void aborted_computations(int computations) const override {
-		unique_lock<mutex> lck{lock};
-		os<<computations<<" moved to valhalla"<<endl;
+		os<<"loaded computations from "<<input_file<<endl;
 	}
-	void tick() const override {
+	void unpacked_computations() override {
+		unique_lock<mutex> lck{lock};
+		os<<"unpacked computations"<<endl;
+	}
+	void removed_computations_in_db(int eliminated) override {
+		unique_lock<mutex> lck{lock};
+		os<<"eliminated "<<eliminated<<" computations from database"<<endl;	
+	}
+	void removed_precalculated(int eliminated) override {
+		unique_lock<mutex> lck{lock};
+		os<<"eliminated "<<eliminated<<" already-performed computations from work directory"<<endl;
+	}
+	void aborted_computations(int eliminated) override {
+		unique_lock<mutex> lck{lock};
+		os<<eliminated<<" moved to valhalla"<<endl;
+	}
+	void resurrected(int resurrected,  megabytes memory_limit) override {
+		unique_lock<mutex> lck{lock};
+		os<<"resurrected "<<resurrected<<" computations to thread with "<<memory_limit<<"MB"<<endl;			
+	}
+	void assigned_computations(int assigned) override {
+		unique_lock<mutex> lck{lock};
+		os<<"assigned "<<assigned<<" computations to a process"<<endl;
+	}
+	void tick(int packed_computations, int unpacked_computations, int bad, int abandoned) override {
     static char bars[] = { '/', '-', '\\', '|' };	
 		unique_lock<mutex> lck{lock};
 		os<<bars[pos]<<"\r";
 		os.flush();
 		pos = (pos + 1) % 4;
-	}
-	void print_computation(const Computation& computation) const override {
+	}	
+	void update_bad(const vector<pair<megabytes,int>>& memory_limits) override {}
+	unique_ptr<ThreadUIHandle> make_thread_handle(int thread);
+	void print_computation(const Computation& computation) override {
 		unique_lock<mutex> lck{lock};
 		os<<computation.to_string()<<endl;
 	}
 	void detach() const override {
 		unique_lock<mutex> lck{lock};	//block until any ongoing operation is finished
 	}
-
-	unique_ptr<ThreadUIHandle> make_thread_handle(int thread) override;
 };
 
 class ThreadStreamUIHandle : public ThreadUIHandle {
@@ -73,24 +81,24 @@ class ThreadStreamUIHandle : public ThreadUIHandle {
 	}
 public:
 	ThreadStreamUIHandle(const StreamUserInterface* ui, int thread) : ui{ui}, thread{thread} {}
- 	void computations_added(int assigned_computations, megabytes memory_limit) const override {
+ 	void computations_added(int assigned_computations, megabytes memory_limit) override {
 		if (assigned_computations) {
 			unique_lock<mutex> lck{ui->lock};
 			print_thread_id();
 			ui->os<<"process with "<<memory_limit<<"MB started with "<<assigned_computations<<" computations"<<endl; 	
 		}
  	}
-	void thread_started(megabytes memory) const override {
+	void thread_started(megabytes memory) override {
 		unique_lock<mutex> lck{ui->lock};
 		print_thread_id();
 		ui->os<<"thread started with a limit of "<<memory<<"MB"<<endl;
 	}
-	void thread_stopped(megabytes memory) const override {
+	void thread_stopped(megabytes memory) override {
 		unique_lock<mutex> lck{ui->lock};
 		print_thread_id();
 		ui->os<<"stopped thread with a limit of "<<memory<<"MB"<<endl;
 	}
-	void bad_computation(const Computation& computation, megabytes memory_limit) const override {
+	void bad_computation(const Computation& computation, megabytes memory_limit) override {
 		unique_lock<mutex> lck{ui->lock};
 		print_thread_id();
 		ui->os<<"could not complete "<<computation.to_string()<<" with "<<memory_limit<<" MB of memory"<<endl;	

@@ -20,34 +20,34 @@
 #include "computationrunner.h"
 #include "parameters.h"
 #include "interactiveui.h"
+#include "streamui.h"
 #include "workerthread.h"
 
 using namespace std;
 
 
-void loop_flush_bad(future<void> terminateFuture) {
+void loop_ui(future<void> terminateFuture) {
 	future_status status;
 	do {
-		status=terminateFuture.wait_for(std::chrono::milliseconds(1000));
-		this_thread::sleep_for(std::chrono::milliseconds(1000));
-		ComputationRunner::singleton().check_memory_and_flush_bad();
+		status=terminateFuture.wait_for(std::chrono::milliseconds(200));
+		ComputationRunner::singleton().tick();
 	} while (status!=future_status::ready);
 }
 
-thread create_flush_thread(future<void>&& terminate_signal) {
-	thread flush_thread{loop_flush_bad,move(terminate_signal)};	
-	return flush_thread;
+thread create_ui_thread(future<void>&& terminate_signal) {
+	thread ui_thread{loop_ui,move(terminate_signal)};	
+	return ui_thread;
 }
 
 
 void launch_threads(const Parameters& parameters, UserInterface* ui) {
 	try {
 		promise<void> terminate_signal;	
-		thread flush_thread=create_flush_thread(terminate_signal.get_future());
+		thread ui_thread=create_ui_thread(terminate_signal.get_future());
 		WorkerThreads worker_threads{parameters,ui};
 		worker_threads.join();
 		terminate_signal.set_value();
-		flush_thread.join();
+		ui_thread.join();
 	}
 	catch (const Exception& e) {
 		cout<<e.what()<<endl;
@@ -62,22 +62,44 @@ string command_line(char** begin, char** end) {
 	return result;
 }
 
-int main(int argv, char** argc) {
+int run(const Parameters& parameters,UserInterface* ui) {
 	try {
-		Parameters parameters=command_line_parameters(argv,argc);		
-		cout<<"BEGIN: "<<command_line(argc,argc+argv)<<endl;
-		auto ui=make_unique<InteractiveUserInterface>();
-		ComputationRunner::singleton().attach_user_interface(ui.get());
 		if (parameters.operating_mode==OperatingMode::BATCH_MODE)	{
 			ComputationRunner::singleton().init(parameters);
 			ComputationRunner::singleton().print_computations();
 		}
-		else 
-			launch_threads(parameters,ui.get());
-		boost::filesystem::remove_all(parameters.communication_parameters.huginn);
-		ComputationRunner::singleton().attach_user_interface();	
-		cout<<"END: "<<command_line(argc,argc+argv)<<endl;	
-		return 0;
+		else launch_threads(parameters,ui);		
+	}
+	catch (const Exception& e) {
+		cerr<<e.what()<<endl;
+		return 1;
+	}
+	return 0;
+}
+
+unique_ptr<UserInterface> create_ui(const Parameters& parameters) {
+	if (parameters.console) return make_unique<StreamUserInterface>(cout);
+	else return  make_unique<InteractiveUserInterface>();
+}
+
+int create_ui_and_run(const Parameters& parameters, const string& command_line) {
+	cout<<"BEGIN: "<<command_line<<endl;
+	auto ui=create_ui(parameters);
+	ComputationRunner::singleton().attach_user_interface(ui.get());
+	auto return_code=run(parameters,ui.get());
+	ComputationRunner::singleton().attach_user_interface();
+	boost::filesystem::remove_all(parameters.communication_parameters.huginn);
+	cout<<(return_code? "TERMINATED: " : "END: ");
+	cout<<command_line<<endl;	
+	return return_code;
+}
+
+
+
+int main(int argv, char** argc) {
+	try {
+		Parameters parameters=command_line_parameters(argv,argc);		
+		return create_ui_and_run(parameters, command_line(argc,argc+argv));
 	}
 	catch (const Exception& e) {
 		cerr<<e.what()<<endl;

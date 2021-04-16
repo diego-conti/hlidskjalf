@@ -124,11 +124,11 @@ public:
 			SynchronizedComputations::add_computations_to_do(assigned_computations,computations_per_process,memory_limit);
 	}
 	
-	void check_memory_and_flush_bad() {	
+	void tick() {	
 		auto limit=parameters.computation_parameters.lowest_free_memory_bound_in_kb;	
 		if (limit && free_kb_of_memory()<limit) 
 			throw	OutOfMemoryException{free_kb_of_memory()};
-		flush_bad();
+		SynchronizedComputations::tick();
 	}
 	
 	int assign_id() {

@@ -27,7 +27,7 @@
 #include "csvreader.h"
 
 template<typename Iterator> Iterator n_th_element_or_end(Iterator begin, Iterator end, int n) {
-		if (n==0) return begin;
+		if (n==0 || begin==end) return begin;
 		assert(n>0);
 		auto result=begin;
 		std::advance(result,n);
@@ -73,8 +73,14 @@ public:
 	megabytes lowest_effective_memory_limit() const {
 		unique_lock<mutex> lock{mtx};
 		int lowest=std::numeric_limits<int>::max();
-		for (auto& p:computations_by_memory_limit) if (p.first<lowest) lowest=p.first;
+		for (auto& p:computations_by_memory_limit) if (p.first<lowest && !p.second.empty()) lowest=p.first;
 		return lowest;
+	}
+	vector<pair<megabytes,int>> summary() const {
+		unique_lock<mutex> lock{mtx};
+		vector<pair<megabytes,int>> result;
+		for (auto & p:computations_by_memory_limit) if (p.second.size()) result.emplace_back(p.first,p.second.size());
+		return result;		
 	}
 	int size() const {return size_;}
 	bool empty() const {
@@ -163,7 +169,8 @@ class SynchronizedComputations {
 	AbortedComputations bad;
 	UnpackedComputations computations;
 	PackedComputations packed_computations;
-	const UserInterface* ui=&NoUserInterface::singleton();
+	UserInterface* ui=&NoUserInterface::singleton();
+	int abandoned=0;
 
 	void synchronized_add_computations_to_do(AssignedComputations& assigned_computations, int computations_per_process, megabytes memory_limit) {
 	}
@@ -172,20 +179,20 @@ protected:
 	void load_computations(const string& input_file,const CSVSchema& schema, int max_computations_in_template) {
 		ifstream s{input_file};
 		packed_computations.load(s,schema,max_computations_in_template);
-		ui->loaded_computations(input_file,packed_computations.size(), computations.size(),bad.size());
+		ui->loaded_computations(input_file);
 	}
 //unpack computation templates into computations and remove those already processed
 	void unpack_computations_and_remove_already_processed(int min_threshold, int max_threshold, const optional<SimpleDatabaseView>& db_view,const string& output_dir,const CSVSchema& schema) {	
 		auto lock=computations.unique_lock();
 		while (computations.size()<min_threshold && !packed_computations.empty()) {
 			auto primary_ids=packed_computations.unpack(max_threshold, computations);
-			ui->unpacked_computations(packed_computations.size(), computations.size(),bad.size());
+			ui->unpacked_computations();
 			if (db_view) {
 				int eliminated=computations.eliminate_computations_in_db(db_view.value(),primary_ids);
-				ui->removed_computations_in_db(eliminated,packed_computations.size(), computations.size(),bad.size());
+				ui->removed_computations_in_db(eliminated);
 			}
 			int eliminated=computations.eliminate_precalculated(output_dir,schema);
-	    ui->removed_precalculated(eliminated,packed_computations.size(), computations.size(),bad.size());
+	    ui->removed_precalculated(eliminated);
 		}
 	}
 	int last_used_id(const string& output_dir) const {
@@ -202,7 +209,7 @@ protected:
 	}
 	virtual int to_valhalla(AbortedComputations& computations) =0;
 public:
-	void attach_user_interface(const UserInterface* interface=&NoUserInterface::singleton()) {
+	void attach_user_interface(UserInterface* interface=&NoUserInterface::singleton()) {
 		if (ui) ui->detach();
 		ui=interface;
 	}
@@ -213,18 +220,20 @@ public:
 			int to_add=max(0,computations_per_process- static_cast<int>(assigned_computations.size()));
 			auto resurrected=bad.extract_within_memory_limit(memory_limit, to_add);
 			to_add-=resurrected.size();
-			ui->resurrected(resurrected.size(),packed_computations.size(), computations.size(),bad.size());
+			ui->resurrected(resurrected.size(),memory_limit);
+			ui->update_bad(bad.summary());
 			assigned_computations.insert(resurrected.begin(),resurrected.end());
 			if (!computations.empty()) {
 				auto lock=computations.unique_lock();
 				computations.assign(to_add,assigned_computations);
 			}
-			ui->assigned_computations(assigned_computations.size(),packed_computations.size(), computations.size(),bad.size());
+			ui->assigned_computations(assigned_computations.size());
 	}
-	void flush_bad() {
+	void tick() {
 		int removed=to_valhalla(bad);
-		if (removed) ui->aborted_computations(removed,packed_computations.size(), computations.size(),bad.size());
-		else ui->tick();
+		abandoned+=removed;
+		if (removed) ui->aborted_computations(removed);
+		else ui->tick(packed_computations.size(), computations.size(),bad.size(),abandoned);
 	}
 	void print_computations() const {
 	//TODO unpack computations and print everything to the ui, which presumably is a streamui
@@ -238,7 +247,8 @@ public:
 		return bad.lowest_effective_memory_limit();
 	}
 	bool finished() {
-		return computations.empty() && packed_computations.empty() && bad.empty();
+		auto result=computations.empty() && packed_computations.empty() && bad.empty();
+		return result;
 	}
 };
 

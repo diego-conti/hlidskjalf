@@ -25,7 +25,10 @@ class MemoryManager {
 	MemoryManager()=default;
 	//start a thread with allocated amount of memory, or wait for enough memory to be freed. If memory is nullopt, just wait.
 	megabytes start_and_unlock(optional<megabytes> memory) {
-		if (finished()) return 0;
+		if (finished()) {
+			suspension_mtx.unlock();
+			return 0;
+		}
 		if (memory && allocated+memory.value()<=limit) {
 			allocated+=memory.value();
 			--suspended_threads; 
