@@ -114,6 +114,13 @@ public:
 		return computations_to_do;
 	}
 	
+	void print_computations() {
+		do {
+			unpack_computations_and_remove_already_processed(0,COMPUTATIONS_TO_STORE_IN_MEMORY, create_db_view(),parameters.script_parameters.output_dir, schema);
+			SynchronizedComputations::print_computations();
+		} while (!finished());
+	}
+	
 	void add_computations_to_do(AssignedComputations& assigned_computations, megabytes memory_limit) {
 			int min_threshold=parameters.computation_parameters.computations_per_process*parameters.computation_parameters.nthreads;
 			if (no_computations()<min_threshold) {

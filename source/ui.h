@@ -10,6 +10,7 @@ public:
 	virtual void thread_started(megabytes memory) =0;
 	virtual void thread_stopped(megabytes memory) =0;
 	virtual void bad_computation(const Computation& computation, megabytes memory_limit)  =0;	
+	virtual ~ThreadUIHandle() =default;
 };
 
 class UserInterface {
@@ -28,6 +29,7 @@ public:
 	virtual void detach() const =0;
 		
 	virtual unique_ptr<ThreadUIHandle> make_thread_handle(int thread) =0;	//the handle becomes invalid when the UI is destroyed
+	virtual ~UserInterface() =default;
 };
 
 

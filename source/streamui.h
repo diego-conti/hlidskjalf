@@ -71,6 +71,9 @@ public:
 	void detach() const override {
 		unique_lock<mutex> lck{lock};	//block until any ongoing operation is finished
 	}
+	~StreamUserInterface() {
+		os<<"disconnecting UI"<<endl;
+	}
 };
 
 class ThreadStreamUIHandle : public ThreadUIHandle {

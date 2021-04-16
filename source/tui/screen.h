@@ -3,6 +3,7 @@
 
 #include "window.h"
 #include <list>
+#include <iostream>
 
 class Screen {
 	mutable std::mutex mtx;
@@ -44,7 +45,6 @@ public:
 		for (auto& x: windows) x.refresh();
 	}
 	~Screen() {
-		auto lock=GlobalTuiLock::scoped_lock(mtx);
 		endwin();
 	}
 };

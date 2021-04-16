@@ -78,7 +78,7 @@ int run(const Parameters& parameters,UserInterface* ui) {
 }
 
 unique_ptr<UserInterface> create_ui(const Parameters& parameters) {
-	if (parameters.console) return make_unique<StreamUserInterface>(cout);
+	if (parameters.console || parameters.operating_mode==OperatingMode::BATCH_MODE) return make_unique<StreamUserInterface>(cout);
 	else return  make_unique<InteractiveUserInterface>();
 }
 
@@ -89,6 +89,7 @@ int create_ui_and_run(const Parameters& parameters, const string& command_line) 
 	auto return_code=run(parameters,ui.get());
 	ComputationRunner::singleton().attach_user_interface();
 	boost::filesystem::remove_all(parameters.communication_parameters.huginn);
+	delete ui.release();
 	cout<<(return_code? "TERMINATED: " : "END: ");
 	cout<<command_line<<endl;	
 	return return_code;

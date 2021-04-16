@@ -128,6 +128,11 @@ public:
 	auto scoped_lock(mutex& m) {
 		return std::scoped_lock(mtx,m);
 	}
+	void clear() {
+		computations.clear();
+	}
+	auto begin() const {return computations.begin();}
+	auto end() const {return computations.end();}	
 	int size() const {return computations.size();}
 	bool empty() const {return computations.empty();}
 };
@@ -235,9 +240,10 @@ public:
 		if (removed) ui->aborted_computations(removed);
 		else ui->tick(packed_computations.size(), computations.size(),bad.size(),abandoned);
 	}
-	void print_computations() const {
-	//TODO unpack computations and print everything to the ui, which presumably is a streamui
-		throw 0;
+	void print_computations() 	 {
+		auto lock=computations.unique_lock();
+		for (auto& x: computations) ui->print_computation(x);
+		computations.clear();
 	}
 	int no_computations() const {
 		return computations.size();
