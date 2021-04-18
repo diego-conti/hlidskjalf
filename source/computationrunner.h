@@ -46,11 +46,59 @@ class MagmaRunner {
 	string magma_script;
 	string magma_path;	
 	Processes processes;
+
+	void write_computations_to_do(const string& data_filename,const AssignedComputations& computations) {
+		ofstream file{data_filename,std::ofstream::trunc};
+		for (auto x: computations) file<<x.to_string()<<endl;
+		file.close();	
+	}
+
+	enum class LineType {LINE,PART,OVER,INVALID};
+	pair<LineType, string> parse_line(const string& line) const {
+		auto first_five_chars=line.substr(0,5);
+		if (first_five_chars=="LINE "s) return {LineType::LINE,line.substr(5)};
+		else if (first_five_chars=="PART "s) return {LineType::PART,line.substr(5)};
+		else if (first_five_chars=="OVER"s) return {LineType::OVER,{}};
+		else return {LineType::INVALID,{}};	
+	}
+	
+	void add_line(vector<string>& lines, const string& line, string& last_string) const {
+		auto type_and_string=parse_line(line);
+		switch (type_and_string.first) {
+			case LineType::LINE: 
+				lines.push_back(type_and_string.second); 
+				break;
+			case LineType::PART:
+				last_string+=type_and_string.second; 
+				break;
+			case LineType::OVER:
+				lines.push_back(last_string); 
+				last_string.clear();
+				break;				
+			default:
+				break;
+		}
+	}
+
+ 	vector<string> launch_child_and_read_data(const string& command_line) {
+ 		vector<string> result;
+ 		boost::process::ipstream is;
+		auto child=boost::process::child{command_line, boost::process::std_out > is};
+		processes.add(&child);
+		string last_string;
+		string line;
+		child.wait();
+	  while (std::getline(is, line) && !line.empty()) 
+  		add_line(result,line,last_string);    
+		processes.remove(&child);
+		return result;
+ 	}
+
 public:
 	MagmaRunner(const string& magma_script) : magma_script{magma_script}, magma_path{::magma_path()} {}
 
 	string script_version() const {
-	  boost::process::ipstream is; //reading pipe-stream
+	  boost::process::ipstream is;
  		boost::process::system (magma_path+ " -b printVersion:=true "+ magma_script,boost::process::std_out > is);
     std::string line;
     string script_version;
@@ -59,15 +107,10 @@ public:
 		return script_version;
 	}
 
-	void invoke_magma_script(const string& process_id,const AssignedComputations& computations,const Parameters& parameters, megabytes memory_limit) {
+	 std::vector<std::string> invoke_magma_script(const string& process_id,const AssignedComputations& computations,const Parameters& parameters, megabytes memory_limit) {						
 		auto data_filename=parameters.communication_parameters.huginn+"/"+process_id+".data";
-		ofstream file{data_filename,std::ofstream::trunc};
-		for (auto x: computations) file<<x.to_string()<<endl;
-		file.close();
-		auto child=boost::process::child{magma_path+" -b "+parameters.script_parameters.script_invocation(process_id,data_filename, memory_limit), boost::process::std_out > boost::process::null};
-		processes.add(&child);
-		child.wait();
-		processes.remove(&child);
+		write_computations_to_do(data_filename,computations);
+		return launch_child_and_read_data(magma_path+" -b "+parameters.script_parameters.script_invocation(process_id,data_filename, memory_limit));	
 	}
 	void terminate_all() {
 		processes.terminate();
@@ -176,12 +219,16 @@ public:
 	}
 	
 	AssignedComputations compute(const string& process_id, AssignedComputations computations, megabytes memory_limit) const {
-		auto output_filename=parameters.script_parameters.output_dir+"/"+process_id+parameters.script_parameters.work_output_extension;
-		auto size=file_exists(output_filename)? boost::filesystem::file_size(output_filename) : 0;
-		magma_runner->invoke_magma_script(process_id, computations,parameters,memory_limit);		
-		ifstream result_file{output_filename};	
-		result_file.seekg(size);
-		eliminate_computations<CSVReader>(result_file,computations,schema);
+		auto output_filename=parameters.script_parameters.output_dir+"/"+process_id+parameters.script_parameters.work_output_extension;		
+		auto data=	magma_runner->invoke_magma_script(process_id, computations,parameters,memory_limit);
+		ofstream output{output_filename,std::ofstream::app};		
+		for (auto& line : data) {
+			int size=computations.size();
+			erase(computations,CSVReader::extract_computation(line,schema));
+			if (computations.size()==size) std::cerr<<"cannot find computation "<<line<<endl;
+			output<<line<<endl;
+		}
+		//ui->completed_computations(data.size());
 		return computations;
 	}
 	bool large_thread(megabytes memory_limit) {
