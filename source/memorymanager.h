@@ -4,9 +4,10 @@
 #include "stdincludes.h"
 #include "computationrunner.h"
 
+
 class MemoryManager {
 	mutex suspension_mtx;		//mutex used to lock access to all the data in this class
-	megabytes allocated,limit,base_memory_limit;
+	megabytes allocated=0,limit,base_memory_limit;
 	std::condition_variable suspension;
 	int suspended_threads=0;
 	
@@ -80,12 +81,12 @@ public:
 		unique_lock<mutex> lck{suspension_mtx};
 		base_memory_limit=n;
 	}
-	pair<megabytes,megabytes> increase_memory_limit(megabytes total_memory_delta, megabytes base_memory_delta) {
+	MemoryUse increase_memory_limit(megabytes total_memory_delta, megabytes base_memory_delta) {
 		unique_lock<mutex> lck{suspension_mtx};
 		if (limit+total_memory_delta>0) limit+=total_memory_delta;
-		if (base_memory_limit+base_memory_delta>ComputationRunner::singleton().lowest_effective_memory_limit()) base_memory_limit+=base_memory_delta;
+		base_memory_limit=std::max(base_memory_limit+base_memory_delta,ComputationRunner::singleton().lowest_effective_memory_limit());
 		if (total_memory_delta>0 || base_memory_delta<0) suspension.notify_one();
-		return std::make_pair(limit,base_memory_limit);
+		return {limit,base_memory_limit,allocated};
 	}
 };
 #endif

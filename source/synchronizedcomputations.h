@@ -74,6 +74,7 @@ public:
 		unique_lock<mutex> lock{mtx};
 		int lowest=std::numeric_limits<int>::max();
 		for (auto& p:computations_by_memory_limit) if (p.first<lowest && !p.second.empty()) lowest=p.first;
+		if (lowest==std::numeric_limits<int>::max()) lowest=0;
 		return lowest;
 	}
 	vector<pair<megabytes,int>> summary() const {
@@ -193,7 +194,6 @@ protected:
 		bad.clear();
 		auto lock=computations.unique_lock();
 		computations.clear();
-		ui->loaded_computations("SynchronizedComputations::terminate terminated");
 	}
 	bool terminating() const {return should_terminate;}
 //to be called at initialization or when a new input_file is provided through the UI

@@ -40,7 +40,6 @@ public:
 		unique_lock<mutex> lck{mtx};
 		for (auto child: processes)
 			child->terminate();
-		std::cerr<<"terminated "<<processes.size()<<" PROCESSES"<<endl;
 		processes.clear();
 	}	
 };
@@ -220,7 +219,9 @@ public:
 		SynchronizedComputations::terminate();
 		magma_runner->terminate_all();
 	}
-	
+	void set_no_computations(int ncomputations) {
+		if (ncomputations>0) parameters.computation_parameters.computations_per_process=ncomputations;
+	}
 	AssignedComputations compute(const string& process_id, AssignedComputations computations, megabytes memory_limit) const {
 		auto output_filename=parameters.script_parameters.output_dir+"/"+process_id+parameters.script_parameters.work_output_extension;		
 		if (terminating()) return AssignedComputations{};

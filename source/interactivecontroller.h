@@ -12,11 +12,13 @@ public:
 	void on_key_pressed(int keyCode) override {
 		switch (keyCode) {
 			case 'q' : 
-				ui->loaded_computations("terminating");
 				ComputationRunner::singleton().terminate(); 
 				break;
 			case 'l': 
-				ComputationRunner::singleton().load_computations(ui->get_filename());
+				ComputationRunner::singleton().load_computations(ui->get_filename("Enter .comp file to load:"));
+				break;
+			case 'c': 
+				ComputationRunner::singleton().set_no_computations(ui->get_number("Computations per process:"));
 				break;
 			case KEY_DOWN : 
 				ui->display_memory_limit(MemoryManager::singleton().increase_memory_limit(-128,0));

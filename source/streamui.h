@@ -69,11 +69,14 @@ public:
 		unique_lock<mutex> lck{lock};
 		os<<computation.to_string()<<endl;
 	}
-	void display_memory_limit(pair<megabytes,megabytes> memory) override {
-		os<<"Total limit: "<<memory.first<<"MB\tLower limit per thread: "<<memory.second<<"MB"<<endl;
+	void display_memory_limit(MemoryUse memory) override {
+		os<<"Total limit: "<<memory.limit<<"MB("<<memory.allocated<<"allocated)\tLower limit per thread: "<<memory.base_memory_limit<<"MB"<<endl;
 	}	
-	string get_filename() override {
+	string get_filename(const string& text) override {
 		return {};
+	}
+	int get_number(const string& text) override {
+		return 0;
 	}
 	~StreamUserInterface() {
 		os<<"disconnecting UI"<<endl;
@@ -109,6 +112,11 @@ public:
 		unique_lock<mutex> lck{ui->lock};
 		print_thread_id();
 		ui->os<<"could not complete "<<computation.to_string()<<" with "<<memory_limit<<" MB of memory"<<endl;	
+	}
+	void finished_computations(int no_computations, megabytes memory) override {
+		unique_lock<mutex> lck{ui->lock};
+		print_thread_id();
+		ui->os<<"finished "<<no_computations<<" with "<<memory<<" MB of memory"<<endl;		
 	}
 };
 
