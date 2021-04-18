@@ -79,7 +79,7 @@ int run(const Parameters& parameters,UserInterface* ui) {
 }
 
 unique_ptr<UserInterface> create_ui(const Parameters& parameters) {
-	if (parameters.console || parameters.operating_mode==OperatingMode::BATCH_MODE) return make_unique<StreamUserInterface>(cout);
+	if (parameters.stdio || parameters.operating_mode==OperatingMode::BATCH_MODE) return make_unique<StreamUserInterface>(cout);
 	else return  make_unique<InteractiveUserInterface>();
 }
 

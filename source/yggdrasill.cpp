@@ -62,7 +62,7 @@ public:
 
 
 OmittedEntries update_db_from_file(const fs::path& file, Database& db,const CSVSchema& schema) {
-	auto csv=CSV::from_file(file.native());
+	auto csv=CSV::from_file(file.native(),CSV::balance_braces);
 	auto updater=DBUpdater{db};	
 	return updater.update_db(csv,schema);
 }

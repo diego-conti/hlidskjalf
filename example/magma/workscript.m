@@ -16,20 +16,8 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 *****************************************************************************/
 
-if assigned printVersion then print "1.0"; quit; end if;
-
-if not assigned processId then error "variable processId should be assigned to unique string"; end if;
-if not assigned dataFile then error "variable dataFile should point to a valid data file"; end if;
-if not assigned outputPath then error "variable outputPath should point to a directory to contain the output"; end if;
-if not assigned megabytes then error  "variable megabytes should indicate a memory limit in MB (or 0 for no limit)"; end if;
-
-SetMemoryLimit(StringToInteger(megabytes)*1024*1024);
-SetQuitOnError(true);
-SetColumns(1024);
-
-WriteToOutputFile:=procedure(riga,outputPath)
-	Write(outputPath cat "/" cat Sprint(processId) cat ".work",riga);
-end procedure;
+load "magma/hliðskjálflayer.m";
+if assigned printVersion then print "1.1"; quit; end if;
 
 ReadLine:=function(line)
 	components:=Split(line,";");
@@ -37,8 +25,8 @@ ReadLine:=function(line)
 	return StringToInteger(components[1]), components[2],components[3];
 end function;
 
-WriteLine:=procedure(primaryInput1,secondaryInput1,secondaryInput2,output,outputPath)
-	WriteToOutputFile(Sprint(primaryInput1) cat ";" cat secondaryInput1 cat ";" cat secondaryInput2 cat ";" cat output,outputPath);
+WriteLine:=procedure(primaryInput1,secondaryInput1,secondaryInput2,output)
+	WriteComputation(Sprint(primaryInput1) cat ";" cat secondaryInput1 cat ";" cat secondaryInput2 cat ";" cat output);
 end procedure;
 
 //return a string representing the output of the computation. In this example, returns the sum of the primary input with the lengths of the secondary inputs
@@ -46,16 +34,16 @@ Compute:=function(primaryInput1,secondaryInput1,secondaryInput2)
 	return Sprint(primaryInput1+#secondaryInput1+#secondaryInput2);
 end function;
 
-ComputeAndWriteToFile:=procedure(fileName,outputPath)
+ComputeAndWriteToStdout:=procedure(fileName)
 	file:=Open(fileName,"r");
 	line:=Gets(file);
 	while not IsEof(line) do
 		primaryInput1,secondaryInput1,secondaryInput2:=ReadLine(line);
 		output:=Compute(primaryInput1,secondaryInput1,secondaryInput2);
-		WriteLine(primaryInput1,secondaryInput1,secondaryInput2,output,outputPath);
+		WriteLine(primaryInput1,secondaryInput1,secondaryInput2,output);
 		line:=Gets(file);
 	end while;
 end procedure;
 
-ComputeAndWriteToFile(dataFile,outputPath);
+ComputeAndWriteToStdout(dataFile);
 quit;

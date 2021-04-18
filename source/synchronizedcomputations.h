@@ -151,7 +151,8 @@ public:
 	void load(istream& s, const CSVSchema& schema, int max_computations_in_template) {
 		unique_lock<mutex> lock{mtx};
 		while (has_data_after_skipping_empty_lines(s)) {
-			CSVLine input{get_line_with_balanced_curly_braces(s)};		
+			string input;
+			getline(s,input);
 			auto computation_template=CSVReader::extract_computation_template(input,schema);
 			size_+=computation_template.no_computations();
 			for (auto& part : computation_template.split(max_computations_in_template))
@@ -192,7 +193,9 @@ protected:
 		bad.clear();
 		auto lock=computations.unique_lock();
 		computations.clear();
+		ui->loaded_computations("SynchronizedComputations::terminate terminated");
 	}
+	bool terminating() const {return should_terminate;}
 //to be called at initialization or when a new input_file is provided through the UI
 	void load_computations(const string& input_file,const CSVSchema& schema, int max_computations_in_template) {
 		ifstream s{input_file};
@@ -238,14 +241,14 @@ public:
 			int to_add=max(0,computations_per_process- static_cast<int>(assigned_computations.size()));
 			auto resurrected=bad.extract_within_memory_limit(memory_limit, to_add);
 			to_add-=resurrected.size();
-			ui->resurrected(resurrected.size(),memory_limit);
+			if (resurrected.size()) ui->resurrected(resurrected.size(),memory_limit);
 			ui->update_bad(bad.summary());
 			assigned_computations.insert(resurrected.begin(),resurrected.end());
 			if (!computations.empty()) {
 				auto lock=computations.unique_lock();
 				computations.assign(to_add,assigned_computations);
 			}
-			ui->assigned_computations(assigned_computations.size());
+			if (assigned_computations.size()) ui->assigned_computations(assigned_computations.size());
 	}
 	void tick() {
 		int removed=to_valhalla(bad);

@@ -38,7 +38,10 @@ public:
 	}	
 	void terminate() {		
 		unique_lock<mutex> lck{mtx};
-		for (auto child: processes) child->terminate();
+		for (auto child: processes)
+			child->terminate();
+		std::cerr<<"terminated "<<processes.size()<<" PROCESSES"<<endl;
+		processes.clear();
 	}	
 };
 
@@ -87,9 +90,9 @@ class MagmaRunner {
 		processes.add(&child);
 		string last_string;
 		string line;
-		child.wait();
-	  while (std::getline(is, line) && !line.empty()) 
+	  while (is && std::getline(is, line) && !line.empty()) 
   		add_line(result,line,last_string);    
+		child.wait();
 		processes.remove(&child);
 		return result;
  	}
@@ -220,6 +223,7 @@ public:
 	
 	AssignedComputations compute(const string& process_id, AssignedComputations computations, megabytes memory_limit) const {
 		auto output_filename=parameters.script_parameters.output_dir+"/"+process_id+parameters.script_parameters.work_output_extension;		
+		if (terminating()) return AssignedComputations{};
 		auto data=	magma_runner->invoke_magma_script(process_id, computations,parameters,memory_limit);
 		ofstream output{output_filename,std::ofstream::app};		
 		for (auto& line : data) {
@@ -228,8 +232,8 @@ public:
 			if (computations.size()==size) std::cerr<<"cannot find computation "<<line<<endl;
 			output<<line<<endl;
 		}
+		return terminating()? AssignedComputations{} : computations;
 		//ui->completed_computations(data.size());
-		return computations;
 	}
 	bool large_thread(megabytes memory_limit) {
 		return memory_limit > 2*parameters.computation_parameters.base_memory_limit && memory_limit > 2*lowest_effective_memory_limit();

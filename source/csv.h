@@ -111,12 +111,21 @@ class CSV {
 	}	
 public:
 	CSV(ifstream& s) {
+		while (has_data_after_skipping_empty_lines(s)) {
+			string line;
+			std::getline(s,line);
+			lines.emplace_back(line);
+		}
+	}
+	static struct balance_braces_tag {} balance_braces;
+	CSV(ifstream& s, balance_braces_tag) {
 		while (has_data_after_skipping_empty_lines(s)) 
 			lines.emplace_back(get_line_with_balanced_curly_braces(s));		
 	}
-	static CSV from_file(string filename) {
+	template<typename... T>
+	static CSV from_file(string filename, T... tags) {
 		auto file=open_file(filename);
-		return CSV{file};	
+		return CSV{file, tags...};	
 	}
 	void to_file(string filename) const {
 		ofstream os{filename};
