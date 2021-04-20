@@ -44,7 +44,10 @@ class MemoryManager {
 			suspension.wait_for(lck,std::chrono::seconds(10));
 			if (finished()) return 0;
 			auto request= to_request();
-			if (request) return start_and_unlock(request.value());			
+			if (request) {
+				lck.release();	//maintain the lock after lck goes out of scope, letting start_and_unlock unlock it.
+				return start_and_unlock(request.value());
+			}
 		}
 	}	
 	void release(megabytes n) {
@@ -52,6 +55,9 @@ class MemoryManager {
 		allocated-=n;
 		++suspended_threads;
 		suspension.notify_one();
+	}
+	MemoryUse get_memory_use() {
+		return {limit,base_memory_limit,allocated, free_kb_of_memory()/1024};		
 	}
 public:
 	static MemoryManager& singleton() {
@@ -73,20 +79,19 @@ public:
 		suspension_mtx.lock();
 		return start_and_unlock(to_request());
 	}
-	void set_total_limit(megabytes n) {
+	MemoryUse set_memory_limit(megabytes total_limit, megabytes per_thread_limit) {
 		unique_lock<mutex> lck{suspension_mtx};
-		limit=n;
+		limit=total_limit;
+		base_memory_limit=per_thread_limit;
+		return get_memory_use();
 	}
-	void set_base_memory_limit(megabytes n) {
-		unique_lock<mutex> lck{suspension_mtx};
-		base_memory_limit=n;
-	}
+
 	MemoryUse increase_memory_limit(megabytes total_memory_delta, megabytes base_memory_delta) {
 		unique_lock<mutex> lck{suspension_mtx};
 		if (limit+total_memory_delta>0) limit+=total_memory_delta;
 		base_memory_limit=std::max(base_memory_limit+base_memory_delta,ComputationRunner::singleton().lowest_effective_memory_limit());
 		if (total_memory_delta>0 || base_memory_delta<0) suspension.notify_one();
-		return {limit,base_memory_limit,allocated};
+		return get_memory_use();
 	}
 };
 #endif

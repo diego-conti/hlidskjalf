@@ -9,6 +9,7 @@ public:
 	virtual void computations_added(int assigned_computations, megabytes memory_limit) =0;
 	virtual void thread_started(megabytes memory) =0;
 	virtual void thread_stopped(megabytes memory) =0;
+	virtual	void thread_terminated() =0;
 	virtual void bad_computation(const Computation& computation, megabytes memory_limit)  =0;	
 	virtual	void finished_computations(int no_computations, megabytes memory) =0;
 	virtual ~ThreadUIHandle() =default;
@@ -24,7 +25,7 @@ public:
 
 
 struct MemoryUse {
-	megabytes limit, base_memory_limit, allocated;
+	megabytes limit, base_memory_limit, allocated, free;
 };
 
 class UserInterface {
@@ -54,6 +55,7 @@ public:
 	void computations_added(int assigned_computations, megabytes memory_limit)  {}
 	void thread_started(megabytes memory)  {}
 	void thread_stopped(megabytes memory)  {}
+	void thread_terminated() {};
 	void bad_computation(const Computation& computation, megabytes memory_limit)  {}
 	void finished_computations(int no_computations, megabytes memory) {}
 };

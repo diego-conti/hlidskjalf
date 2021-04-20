@@ -116,7 +116,7 @@ public:
 	
 	void print_computation(const Computation& computation) override {	}
 	void display_memory_limit(MemoryUse memory) override {
-		memory_window<<clear<<"Total limit: "<<memory.limit<<"MB("<<memory.allocated<<" allocated)\tLower limit per thread: "<<memory.base_memory_limit<<"MB"<<release;
+		memory_window<<clear<<"Total limit: "<<memory.limit<<"MB ("<<memory.allocated<<" allocated, "<<memory.free<<" free)\tLower limit per thread: "<<memory.base_memory_limit<<"MB"<<release;
 	}
 	unique_ptr<ThreadUIHandle> make_thread_handle(int thread) override;
 };
@@ -129,7 +129,7 @@ class ThreadInteractiveUIHandle : public ThreadUIHandle {
 		status_window<<clear<<thread<<"\t"<<memory_limit<<"MB\t";
 		std::time_t t = std::time(nullptr);
     std::tm tm = *std::localtime(&t);
-		status_window	<< std::put_time(&tm, "%X %d %b\t");
+		status_window	<< std::put_time(&tm, "%X %d %b\t ");
 	}
 	void print_msg_time() {
 		std::time_t t = std::time(nullptr);
@@ -162,6 +162,10 @@ public:
 		print_msg_time();
 		msg_window<<"completed "<<no_computations<<" computations with "<<memory<<" MB of memory"<<release;	
 	}
+	void thread_terminated() override {
+		print_thread_id(0);
+		status_window<<"terminated"<<release;
+	}	
 };
 
 unique_ptr<ThreadUIHandle> InteractiveUserInterface::make_thread_handle(int thread) {	

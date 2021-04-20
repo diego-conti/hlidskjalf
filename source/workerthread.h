@@ -21,6 +21,7 @@ class WorkerThread {
 			ui_handle->thread_stopped(memory_limit);
 			memory_limit= MemoryManager::singleton().resize(memory_limit);
 		}
+		ui_handle->thread_terminated();
 	}
 
 	LoopExitCondition loop_compute(megabytes memory_limit) {
@@ -64,8 +65,7 @@ public:
 	WorkerThreads(const Parameters& parameters, UserInterface* ui) {	 
 		try {
 			ComputationRunner::singleton().init(parameters);
-			MemoryManager::singleton().set_total_limit(parameters.computation_parameters.total_memory_limit);
-			MemoryManager::singleton().set_base_memory_limit(parameters.computation_parameters.base_memory_limit);
+			ui->display_memory_limit(MemoryManager::singleton().set_memory_limit(parameters.computation_parameters.total_memory_limit,parameters.computation_parameters.base_memory_limit));
 		}
 		catch (Exception& e) {
 			cout<<e.what()<<endl;

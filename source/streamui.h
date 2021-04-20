@@ -70,7 +70,7 @@ public:
 		os<<computation.to_string()<<endl;
 	}
 	void display_memory_limit(MemoryUse memory) override {
-		os<<"Total limit: "<<memory.limit<<"MB("<<memory.allocated<<"allocated)\tLower limit per thread: "<<memory.base_memory_limit<<"MB"<<endl;
+		os<<"Total limit: "<<memory.limit<<"MB ("<<memory.allocated<<"allocated, "<<memory.free<<" free)\tLower limit per thread: "<<memory.base_memory_limit<<"MB"<<endl;
 	}	
 	string get_filename(const string& text) override {
 		return {};
@@ -118,6 +118,12 @@ public:
 		print_thread_id();
 		ui->os<<"finished "<<no_computations<<" with "<<memory<<" MB of memory"<<endl;		
 	}
+	void thread_terminated() override {
+		unique_lock<mutex> lck{ui->lock};
+		print_thread_id();
+		ui->os<<"terminated"<<endl;
+	}	
+
 };
 
 unique_ptr<ThreadUIHandle> StreamUserInterface::make_thread_handle(int thread)  {

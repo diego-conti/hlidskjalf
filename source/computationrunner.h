@@ -42,6 +42,9 @@ public:
 			child->terminate();
 		processes.clear();
 	}	
+	int size() const {
+		return processes.size();
+	}		
 };
 
 class MagmaRunner {
@@ -115,8 +118,9 @@ public:
 		return launch_child_and_read_data(magma_path+" -b "+parameters.script_parameters.script_invocation(process_id,data_filename, memory_limit));	
 	}
 	void terminate_all() {
-		processes.terminate();
+		processes.terminate();	
 	}
+	int running() const {return processes.size();}
 };
 
 
@@ -239,6 +243,10 @@ public:
 	bool large_thread(megabytes memory_limit) {
 		return memory_limit > 2*parameters.computation_parameters.base_memory_limit && memory_limit > 2*lowest_effective_memory_limit();
 	}
+	bool finished() {
+		return SynchronizedComputations::finished() && !magma_runner->running();
+	}
+
 };
 
 #endif 

@@ -27,11 +27,12 @@
 #include "csvreader.h"
 
 template<typename Iterator> Iterator n_th_element_or_end(Iterator begin, Iterator end, int n) {
-		if (n==0 || begin==end) return begin;
-		assert(n>0);
-		auto result=begin;
-		std::advance(result,n);
-		return result == begin ? end : result;
+	assert(n>=0);
+	while (begin!=end && n) {
+		++begin;
+		--n;
+	}
+	return begin;
 //note: in theory C++20 allows writing simply
 //	return std::advance(begin,n,end); 
 }
@@ -137,6 +138,10 @@ public:
 	auto end() const {return computations.end();}	
 	int size() const {return computations.size();}
 	bool empty() const {return computations.empty();}
+	void insert(UnpackedComputations&& other) {
+		computations.insert(other.begin(),other.end());
+		other.clear();
+	}
 };
 
 class PackedComputations {
@@ -204,16 +209,18 @@ protected:
 	}
 //unpack computation templates into computations and remove those already processed
 	void unpack_computations_and_remove_already_processed(int min_threshold, int max_threshold, const optional<SimpleDatabaseView>& db_view,const string& output_dir,const CSVSchema& schema) {	
-		auto lock=computations.unique_lock();
-		while (computations.size()<min_threshold && !packed_computations.empty() && !should_terminate) {
-			auto primary_ids=packed_computations.unpack(max_threshold, computations);
+		UnpackedComputations unpacked;
+		while (computations.size()+unpacked.size()<min_threshold && !packed_computations.empty() && !should_terminate) {
+			auto primary_ids=packed_computations.unpack(max_threshold, unpacked);
 			ui->unpacked_computations();
 			if (db_view) {
-				int eliminated=computations.eliminate_computations_in_db(db_view.value(),primary_ids);
+				int eliminated=unpacked.eliminate_computations_in_db(db_view.value(),primary_ids);
 				ui->removed_computations_in_db(eliminated);
 			}
-			int eliminated=computations.eliminate_precalculated(output_dir,schema,should_terminate);
+			int eliminated=unpacked.eliminate_precalculated(output_dir,schema,should_terminate);
 	    ui->removed_precalculated(eliminated);
+			auto lock=computations.unique_lock();
+			computations.insert(std::move(unpacked));
 		}
 	}
 	int last_used_id(const string& output_dir) const {
