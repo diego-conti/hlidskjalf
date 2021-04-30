@@ -193,7 +193,8 @@ public:
 	
 	void print_computations() {
 		do {
-			unpack_computations_and_remove_already_processed(0,COMPUTATIONS_TO_STORE_IN_MEMORY, create_db_view(),parameters.script_parameters.output_dir, schema);
+			int to_unpack=parameters.computation_parameters.total_memory_limit*1024*1024/128; //assume each Computation takes 64 bytes
+			unpack_computations_and_remove_already_processed(to_unpack,to_unpack, create_db_view(),parameters.script_parameters.output_dir, schema);
 			SynchronizedComputations::print_computations();
 		} while (!finished());
 	}

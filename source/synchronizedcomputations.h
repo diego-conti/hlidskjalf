@@ -189,6 +189,7 @@ class SynchronizedComputations {
 	UserInterface* ui=&NoUserInterface::singleton();
 	int abandoned=0;
 	atomic<bool> should_terminate;
+	atomic<int> unpacking_threads=0;
 
 	void synchronized_add_computations_to_do(AssignedComputations& assigned_computations, int computations_per_process, megabytes memory_limit) {
 	}
@@ -209,6 +210,7 @@ protected:
 	}
 //unpack computation templates into computations and remove those already processed
 	void unpack_computations_and_remove_already_processed(int min_threshold, int max_threshold, const optional<SimpleDatabaseView>& db_view,const string& output_dir,const CSVSchema& schema) {	
+		++unpacking_threads;
 		UnpackedComputations unpacked;
 		while (computations.size()+unpacked.size()<min_threshold && !packed_computations.empty() && !should_terminate) {
 			auto primary_ids=packed_computations.unpack(max_threshold, unpacked);
@@ -222,6 +224,7 @@ protected:
 			auto lock=computations.unique_lock();
 			computations.insert(std::move(unpacked));
 		}
+		--unpacking_threads;
 	}
 	int last_used_id(const string& output_dir) const {
 		int last_process_id=0;
@@ -276,7 +279,7 @@ public:
 		return bad.lowest_effective_memory_limit();
 	}
 	bool finished() {
-		auto result=computations.empty() && packed_computations.empty() && bad.empty();
+		auto result=computations.empty() && !unpacking_threads && packed_computations.empty()  && bad.empty();
 		return result || should_terminate;
 	}
 };
