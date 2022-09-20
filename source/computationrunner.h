@@ -99,12 +99,14 @@ class MagmaRunner {
 		return result;
  	}
 
+
 public:
 	MagmaRunner(const string& magma_script) : magma_script{magma_script}, magma_path{::magma_path()} {}
 
 	string script_version() const {
 	  boost::process::ipstream is;
- 		boost::process::system (magma_path+ " -b printVersion:=true "+ magma_script,boost::process::std_out > is);
+	  cout<<magma_path+ " -b "+ScriptParameters{magma_script,".","printVersion:=true","."}.script_invocation("x","x",0)<<endl;
+ 		boost::process::system (magma_path+ " -b "+ScriptParameters{magma_script,".","printVersion:=true","."}.script_invocation("x","x",0),boost::process::std_out > is);
     std::string line;
     string script_version;
     while (std::getline(is, line) && !line.empty()) 
@@ -191,22 +193,23 @@ public:
 		return computations_to_do;
 	}
 	
-	void print_computations() {
+	void print_computations(ThreadUIHandle& thread_ui) {
 		do {
-			int to_unpack=parameters.computation_parameters.total_memory_limit*1024*1024/128; //assume each Computation takes 64 bytes
-			unpack_computations_and_remove_already_processed(to_unpack,to_unpack, create_db_view(),parameters.script_parameters.output_dir, schema);
+			int to_unpack=parameters.computation_parameters.total_memory_limit*1024*1024/128; //assume each Computation takes 128 bytes
+			unpack_computations_and_remove_already_processed(to_unpack,to_unpack, create_db_view(),parameters.script_parameters.output_dir, schema,thread_ui);
 			SynchronizedComputations::print_computations();
 		} while (!finished());
 	}
 	
-	void add_computations_to_do(AssignedComputations& assigned_computations, megabytes memory_limit) {
+	void add_computations_to_do(AssignedComputations& assigned_computations, megabytes memory_limit,ThreadUIHandle& thread_ui) {
 			int min_threshold=parameters.computation_parameters.computations_per_process*parameters.computation_parameters.nthreads;
 			if (no_computations()<min_threshold) {
-				unpack_computations_and_remove_already_processed(parameters.computation_parameters.computations_per_process,COMPUTATIONS_TO_STORE_IN_MEMORY, create_db_view(), parameters.script_parameters.output_dir, schema);	
+				unpack_computations_and_remove_already_processed(parameters.computation_parameters.computations_per_process,COMPUTATIONS_TO_STORE_IN_MEMORY, create_db_view(), parameters.script_parameters.output_dir, schema,thread_ui);	
 			}
 			auto computations_per_process=no_computations_to_assign(memory_limit);
 			if (computations_per_process==0 && assigned_computations.empty()) computations_per_process=1;
 			SynchronizedComputations::add_computations_to_do(assigned_computations,computations_per_process,memory_limit);
+			thread_ui.computations_added(assigned_computations.size(),memory_limit);
 	}
 	
 	void tick() {	

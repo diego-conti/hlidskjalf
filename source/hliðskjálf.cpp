@@ -67,7 +67,8 @@ int run(const Parameters& parameters,UserInterface* ui) {
 	try {
 		if (parameters.operating_mode==OperatingMode::BATCH_MODE)	{
 			ComputationRunner::singleton().init(parameters);
-			ComputationRunner::singleton().print_computations();
+			auto thread_ui_handle=ui->make_thread_handle(0);
+			ComputationRunner::singleton().print_computations(*thread_ui_handle);
 		}
 		else launch_threads(parameters,ui);		
 	}

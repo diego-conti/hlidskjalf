@@ -54,6 +54,7 @@ public:
 	}
 	~Screen() {
 		move(screen_dimensions.height-1,0);
+		clear();
 		endwin();
 	}
 };

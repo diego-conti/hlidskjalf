@@ -12,6 +12,10 @@ public:
 	virtual	void thread_terminated() =0;
 	virtual void bad_computation(const Computation& computation, megabytes memory_limit)  =0;	
 	virtual	void finished_computations(int no_computations, megabytes memory) =0;
+	virtual void unpacking_computations()=0;		
+	virtual void unpacked_computations(int unpacked) =0;
+	virtual void removed_computations_in_db(int eliminated) =0;
+	virtual void removed_precalculated(int eliminated) =0;	
 	virtual ~ThreadUIHandle() =default;
 };
 
@@ -31,9 +35,6 @@ struct MemoryUse {
 class UserInterface {
 public:
 	virtual void loaded_computations(const string& input_file) =0;
-	virtual void unpacked_computations() =0;
-	virtual void removed_computations_in_db(int eliminated) =0;
-	virtual void removed_precalculated(int eliminated) =0;
 	virtual void aborted_computations(int eliminated) =0;	
 	virtual void resurrected(int resurrected, megabytes memory_limit) =0;
 	virtual void assigned_computations(int assigned) =0;	
@@ -58,14 +59,15 @@ public:
 	void thread_terminated() {};
 	void bad_computation(const Computation& computation, megabytes memory_limit)  {}
 	void finished_computations(int no_computations, megabytes memory) {}
+	void unpacking_computations() override {}
+	void unpacked_computations(int unpacked) override {}
+	void removed_computations_in_db(int eliminated) override {}
+	void removed_precalculated(int eliminated) override {}
 };
 
 class NoUserInterface : public UserInterface {
 public:
 	void loaded_computations(const string& input_file) override {}
-	void unpacked_computations() override {}
-	void removed_computations_in_db(int eliminated) override {}
-	void removed_precalculated(int eliminated) override {}
 	void aborted_computations(int eliminated) override {}
 	void resurrected(int resurrected,  megabytes memory_limit) override {}
 	void assigned_computations(int assigned) override {}

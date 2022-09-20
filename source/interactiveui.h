@@ -59,15 +59,6 @@ public:
 	void loaded_computations(const string& input_file) override {
 		msg_window<<clear<<"loaded new computations from "<<input_file<<release;
 	}
-	void unpacked_computations()  override {
-		msg_window<<clear<<"computations unpacked"<<release;
-	}
-	void removed_computations_in_db(int eliminated)  override {
-		msg_window<<clear<<"eliminated "<<eliminated<<" computations from database"<<release;	
-	}
-	void removed_precalculated(int eliminated)  override {
-		msg_window<<clear<<"eliminated "<<eliminated<<" already-performed computations from work directory"<<release;		
-	}
 	void aborted_computations(int eliminated)  override {
 		msg_window<<clear<<"moved "<<eliminated<<" to valhalla"<<release;		
 	}
@@ -166,6 +157,24 @@ public:
 		print_thread_id(0);
 		status_window<<"terminated"<<release;
 	}	
+	void unpacking_computations() override {
+		print_msg_time();
+		msg_window<<"unpacking computations"<<release;
+	}
+	void unpacked_computations(int unpacked) override {
+		print_msg_time();
+		msg_window<<release;
+		print_thread_id(0);		
+		status_window<<"processing "<<unpacked<<" unpacked computations"<<release;
+	}
+	void removed_computations_in_db(int eliminated) override {
+		print_msg_time();
+		msg_window<<"eliminated "<<eliminated<<" computations from database"<<release;	
+	}
+	void removed_precalculated(int eliminated) override {
+		print_msg_time();
+		msg_window<<"eliminated "<<eliminated<<" already-performed computations from work directory"<<release;
+	}
 };
 
 unique_ptr<ThreadUIHandle> InteractiveUserInterface::make_thread_handle(int thread) {	

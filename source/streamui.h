@@ -31,18 +31,6 @@ public:
 		unique_lock<mutex> lck{lock};
 		os<<"loaded computations from "<<input_file<<endl;
 	}
-	void unpacked_computations() override {
-		unique_lock<mutex> lck{lock};
-		os<<"unpacked computations"<<endl;
-	}
-	void removed_computations_in_db(int eliminated) override {
-		unique_lock<mutex> lck{lock};
-		os<<"eliminated "<<eliminated<<" computations from database"<<endl;	
-	}
-	void removed_precalculated(int eliminated) override {
-		unique_lock<mutex> lck{lock};
-		os<<"eliminated "<<eliminated<<" already-performed computations from work directory"<<endl;
-	}
 	void aborted_computations(int eliminated) override {
 		unique_lock<mutex> lck{lock};
 		os<<eliminated<<" moved to valhalla"<<endl;
@@ -123,6 +111,26 @@ public:
 		print_thread_id();
 		ui->os<<"terminated"<<endl;
 	}	
+	void unpacking_computations() override {
+		unique_lock<mutex> lck{ui->lock};
+		print_thread_id();
+		ui->os<<"unpacking computations"<<endl;
+	}
+	void unpacked_computations(int unpacked) override {
+		unique_lock<mutex> lck{ui->lock};
+		print_thread_id();
+		ui->os<<"unpacked "<<unpacked<<" computations"<<endl;
+	}
+	void removed_computations_in_db(int eliminated) override {
+		unique_lock<mutex> lck{ui->lock};
+		print_thread_id();
+		ui->os<<"eliminated "<<eliminated<<" computations from database"<<endl;	
+	}
+	void removed_precalculated(int eliminated) override {
+		unique_lock<mutex> lck{ui->lock};
+		print_thread_id();
+		ui->os<<"eliminated "<<eliminated<<" already-performed computations from work directory"<<endl;
+	}
 
 };
 

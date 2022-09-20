@@ -26,9 +26,8 @@ class WorkerThread {
 
 	LoopExitCondition loop_compute(megabytes memory_limit) {
 		while (true) {
-			ComputationRunner::singleton().add_computations_to_do(computations_to_do,memory_limit);
+			ComputationRunner::singleton().add_computations_to_do(computations_to_do,memory_limit,*ui_handle);
 			if (computations_to_do.empty()) return LoopExitCondition::RAISE_MEMORY_LIMIT;
-			ui_handle->computations_added(computations_to_do.size(),memory_limit);
 			int no_computations=computations_to_do.size();
 			computations_to_do=ComputationRunner::singleton().compute(process_id_as_string,computations_to_do,memory_limit);
 			if (!computations_to_do.empty()) {

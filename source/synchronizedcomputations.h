@@ -209,18 +209,20 @@ protected:
 		ui->loaded_computations(input_file);
 	}
 //unpack computation templates into computations and remove those already processed
-	void unpack_computations_and_remove_already_processed(int min_threshold, int max_threshold, const optional<SimpleDatabaseView>& db_view,const string& output_dir,const CSVSchema& schema) {	
+	void unpack_computations_and_remove_already_processed(int min_threshold, int max_threshold, const optional<SimpleDatabaseView>& db_view,const string& output_dir,const CSVSchema& schema, ThreadUIHandle& thread_ui) {	
 		++unpacking_threads;
 		UnpackedComputations unpacked;
 		while (computations.size()+unpacked.size()<min_threshold && !packed_computations.empty() && !should_terminate) {
+			thread_ui.unpacking_computations();
 			auto primary_ids=packed_computations.unpack(max_threshold, unpacked);
-			ui->unpacked_computations();
+			thread_ui.unpacked_computations(unpacked.size());
+			if (!unpacked.size()) continue;
 			if (db_view) {
 				int eliminated=unpacked.eliminate_computations_in_db(db_view.value(),primary_ids);
-				ui->removed_computations_in_db(eliminated);
+				thread_ui.removed_computations_in_db(eliminated);
 			}
 			int eliminated=unpacked.eliminate_precalculated(output_dir,schema,should_terminate);
-	    ui->removed_precalculated(eliminated);
+	    thread_ui.removed_precalculated(eliminated);
 			auto lock=computations.unique_lock();
 			computations.insert(std::move(unpacked));
 		}

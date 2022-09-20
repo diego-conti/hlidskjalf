@@ -75,7 +75,21 @@ Output column specification may contain replacement rules, as in
 		}
 	}
 
-This has the effect of replacing every occurrence of Odin in column 5 with Alfaðir, when reading work script output.
+This has the effect of replacing every occurrence of Odin in column 5 with Alfaðir, when reading work script output. To define more than one replacement rule, use curly braces, as in 
+
+	columns 7 {
+		output 5 {
+			replacement {
+				match gold
+				with Sifjar haddr
+			}
+			replacement {
+				match sky
+				with Ymis haus
+			}
+		}			
+	}
+
 
 ### Omit rules
 The schema file can also contain patterns of the form:
