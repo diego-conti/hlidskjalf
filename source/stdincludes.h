@@ -35,6 +35,7 @@
 #include <mutex>
 #include <future>
 #include <atomic>
+#include <chrono>
 
 using std::string;
 using namespace std::literals;

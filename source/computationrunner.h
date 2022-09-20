@@ -85,7 +85,8 @@ class MagmaRunner {
 		}
 	}
 
- 	vector<string> launch_child_and_read_data(const string& command_line) {
+	//returns empty vector if timeout
+ 	vector<string> launch_child_and_read_data(const string& command_line, std::chrono::duration<int> timeout) {
  		vector<string> result;
  		boost::process::ipstream is;
 		auto child=boost::process::child{command_line, boost::process::std_out > is};
@@ -94,8 +95,9 @@ class MagmaRunner {
 		string line;
 	  while (is && std::getline(is, line) && !line.empty()) 
   		add_line(result,line,last_string);    
-		child.wait();
+		bool terminated_early=child.wait_for(timeout);
 		processes.remove(&child);
+		if (terminated_early) result.clear();	//do not return incomplete output
 		return result;
  	}
 
@@ -114,10 +116,10 @@ public:
 		return script_version;
 	}
 
-	 std::vector<std::string> invoke_magma_script(const string& process_id,const AssignedComputations& computations,const Parameters& parameters, megabytes memory_limit) {						
+	 std::vector<std::string> invoke_magma_script(const string& process_id,const AssignedComputations& computations,const Parameters& parameters, megabytes memory_limit, std::chrono::duration<int> timeout) {						
 		auto data_filename=parameters.communication_parameters.huginn+"/"+process_id+".data";
 		write_computations_to_do(data_filename,computations);
-		return launch_child_and_read_data(magma_path+" -b "+parameters.script_parameters.script_invocation(process_id,data_filename, memory_limit));	
+		return launch_child_and_read_data(magma_path+" -b "+parameters.script_parameters.script_invocation(process_id,data_filename, memory_limit),timeout);	
 	}
 	void terminate_all() {
 		processes.terminate();	
@@ -233,7 +235,7 @@ public:
 	AssignedComputations compute(const string& process_id, AssignedComputations computations, megabytes memory_limit) const {
 		auto output_filename=parameters.script_parameters.output_dir+"/"+process_id+parameters.script_parameters.work_output_extension;		
 		if (terminating()) return AssignedComputations{};
-		auto data=	magma_runner->invoke_magma_script(process_id, computations,parameters,memory_limit);
+		auto data=	magma_runner->invoke_magma_script(process_id, computations,parameters,memory_limit,parameters.computation_parameters.timeout);
 		ofstream output{output_filename,std::ofstream::app};		
 		for (auto& line : data) {
 			int size=computations.size();
