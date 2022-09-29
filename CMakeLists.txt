@@ -1,0 +1,12 @@
+cmake_minimum_required(VERSION 3.10)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+project(hlidskjalf VERSION 0.2)
+link_libraries(boost_filesystem boost_program_options)
+include_directories(${CMAKE_SOURCE_DIR}/source)
+add_executable(yggdrasill source/yggdrasill.cpp)
+add_executable(hlidskjalf source/hliðskjálf.cpp)
+
+add_compile_options(-g -O3 -Wctor-dtor-privacy -Wreorder -Wold-style-cast -Wsign-promo -Wchar-subscripts -Winit-self -Wmissing-braces -Wparentheses -Wreturn-type -Wswitch -Wtrigraphs -Wextra -Wno-sign-compare -Wno-narrowing -Wno-attributes)
+target_link_options(hlidskjalf PUBLIC -pthread)
+target_link_libraries(hlidskjalf PUBLIC ncurses)
