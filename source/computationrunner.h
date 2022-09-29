@@ -96,8 +96,7 @@ class MagmaRunner {
 	  while (is && std::getline(is, line) && !line.empty()) 
   		add_line(result,line,last_string);    
 		bool terminated_early=child.wait_for(timeout);
-		processes.remove(&child);
-		if (terminated_early) result.clear();	//do not return incomplete output
+		processes.remove(&child);		
 		return result;
  	}
 

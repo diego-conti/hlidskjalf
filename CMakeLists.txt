@@ -6,6 +6,7 @@ link_libraries(boost_filesystem boost_program_options)
 include_directories(${CMAKE_SOURCE_DIR}/source)
 add_executable(yggdrasill source/yggdrasill.cpp)
 add_executable(hlidskjalf source/hliðskjálf.cpp)
+add_subdirectory(test)
 
 add_compile_options(-g -O3 -Wctor-dtor-privacy -Wreorder -Wold-style-cast -Wsign-promo -Wchar-subscripts -Winit-self -Wmissing-braces -Wparentheses -Wreturn-type -Wswitch -Wtrigraphs -Wextra -Wno-sign-compare -Wno-narrowing -Wno-attributes)
 target_link_options(hlidskjalf PUBLIC -pthread)

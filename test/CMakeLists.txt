@@ -1,0 +1,38 @@
+cmake_minimum_required(VERSION 3.10)
+project(TestHlidskjalf)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+add_compile_options(-g -O0)
+
+FLAGS="--std=c++17 -Isource -g"
+
+add_executable(schema test/source/schema.cpp)
+add_test(NAME testschema COMMAND test/bin/schema test/script/testschema.info >test/testschema.test)
+set_tests_properties(testschema PROPERTIES FIXTURES_SETUP createtestfiles)
+add_executable(csv test/source/csv.cpp)
+add_test(NAME testcsv COMMAND test/bin/csv test/script/testschema.info test/workoutput/test.work >test/testcsv.test)
+set_tests_properties(testcsv PROPERTIES FIXTURES_SETUP createtestfiles)
+add_executable(computation test/source/computation.cpp)
+add_test(NAME testcomputation COMMAND test/bin/computation test/script/testschema.info test/workoutput/test.work >test/testcomputation.test)
+set_tests_properties(testcomputation PROPERTIES FIXTURES_SETUP createTestFiles)
+add_test(NAME testworkscript COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_SOURCE_DIR}/runworkscript.cmake)
+set_tests_properties(testworkscript PROPERTIES FIXTURES_SETUP createTestFiles)
+
+file(GLOB ok_files "test/*.ok")
+foreach(ok_file ${ok_files})
+	cmake_path(GET ${ok_file} STEM file_stem)
+	add_test(NAME ${file_stem} COMMAND ${CMAKE_COMMAND} -E compare_files test/${file_stem}.test ${ok_file})
+	set_tests_properties(${file_stem} PROPERTIES FIXTURES_REQUIRED createTestFiles)
+endforeach()
+
+file(REMOVE_RECURSE test/db.test)
+file(MAKE_DIRECTORY test/db.test)
+add_test(NAME testyggdrasill COMMAND bin/yggdrasill --db test/db.test --schema test/script/testschema.info --workoutput test/workoutput >test/yggdrasillomits.test)
+set_tests_properties(testyggdrasill PROPERTIES FIXTURES_SETUP createDbTestFiles)
+file(GLOB db_files "test/db.ok/*")
+foreach(db_file ${db_files})
+	cmake_path(GET ${db_file} FILENAME file_stem)
+	add_test(NAME db${db_file} COMMAND ${CMAKE_COMMAND} -E compare_files test/db.test/${db_file}.test ${db_file})
+	set_tests_properties(db${db_file} PROPERTIES FIXTURES_REQUIRED createDbTestFiles)
+endforeach()
+
