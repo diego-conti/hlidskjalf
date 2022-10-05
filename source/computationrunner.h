@@ -92,6 +92,7 @@ class MagmaRunner {
 		auto child=boost::process::child{command_line, boost::process::std_in.close(), boost::process::std_out > data, boost::process::std_err > error,ios};		
 		processes.add(&child);		
 		ios.run_for(timeout);
+		child.terminate();
 		ios.stop();
 		processes.remove(&child);
 		return data.get();
