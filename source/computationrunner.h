@@ -80,7 +80,7 @@ class MagmaRunner {
 			case LineType::OVER:
 				lines.push_back(last_string); 
 				last_string.clear();
-				break;				
+				break;
 			default:
 				break;
 		}
@@ -91,7 +91,8 @@ class MagmaRunner {
 		std::future<std::string> data, error;
 		auto child=boost::process::child{command_line, boost::process::std_in.close(), boost::process::std_out > data, boost::process::std_err > error,ios};		
 		processes.add(&child);		
-		bool terminated_early=ios.run_for(timeout);		
+		ios.run_for(timeout);
+		ios.stop();
 		processes.remove(&child);
 		return data.get();
 	}
