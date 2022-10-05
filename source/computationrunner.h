@@ -87,6 +87,7 @@ class MagmaRunner {
 
 	//returns empty vector if timeout
  	vector<string> launch_child_and_read_data(const string& command_line, std::chrono::duration<int> timeout) {
+		cout<<"satrting process :"<<command_line<<endl;
  		vector<string> result;
  		boost::process::ipstream is;
 		auto child=boost::process::child{command_line, boost::process::std_out > is};
@@ -94,8 +95,10 @@ class MagmaRunner {
 		string last_string;
 		string line;
 		bool terminated_early=child.wait_for(timeout);
-		while (is && std::getline(is, line) && !line.empty()) 
+		while (is && std::getline(is, line) && !line.empty())  {
+			cout<<line<<endl;
   			add_line(result,line,last_string);    
+		}
 		processes.remove(&child);
 		for (auto l: result) cout<<l<<endl;
 		cout<<endl;
