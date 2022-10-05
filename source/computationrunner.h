@@ -88,10 +88,12 @@ class MagmaRunner {
 
 	string launch_child(const string& command_line,std::chrono::duration<int> timeout) {
 		boost::asio::io_service ios;
-		std::future<std::string> data;
-		auto child=boost::process::child{command_line, boost::process::std_in.close(), boost::process::std_out > data, ios};
+		std::future<std::string> data, error;
+		auto child=boost::process::child{command_line, boost::process::std_in.close(), boost::process::std_out > data, boost::process::std_err > error,ios};
+		cout<<"child created"<<endl;
 		processes.add(&child);		
 		bool terminated_early=ios.run_for(timeout);
+		cout<<"child run"<<endl;
 		processes.remove(&child);
 		return data.get();
 	}
