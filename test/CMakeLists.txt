@@ -14,7 +14,7 @@ set_tests_properties(preparecsv PROPERTIES FIXTURES_SETUP createtestfiles)
 add_executable(computation source/computation.cpp)
 add_test(NAME preparecomputation COMMAND ${CMAKE_CURRENT_BINARY_DIR}/computation ${PROJECT_SOURCE_DIR}/script/testschema.info ${PROJECT_SOURCE_DIR}/workoutput/test.work ${PROJECT_BINARY_DIR}/testcomputation.test)
 set_tests_properties(preparecomputation PROPERTIES FIXTURES_SETUP createTestFiles)
-add_test(NAME prepareworkscript COMMAND ${CMAKE_COMMAND} -DCMAKE_BINARY_DIR=${CMAKE_BINARY_DIR} -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR} -DPROJECT_BINARY_DIR=${PROJECT_BINARY_DIR} -P ${CMAKE_CURRENT_SOURCE_DIR}/runworkscript.cmake )
+add_test(NAME prepareworkscript COMMAND ${CMAKE_COMMAND} -DCMAKE_TOP_BINARY_DIR=${CMAKE_BINARY_DIR} -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR} -DPROJECT_BINARY_DIR=${PROJECT_BINARY_DIR} -P ${CMAKE_CURRENT_SOURCE_DIR}/runworkscript.cmake )
 set_tests_properties(prepareworkscript PROPERTIES FIXTURES_SETUP createTestFiles)
 
 file(GLOB ok_files LIST_DIRECTORIES false "${PROJECT_SOURCE_DIR}/*.ok")
