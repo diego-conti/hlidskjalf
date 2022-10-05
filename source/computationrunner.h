@@ -102,6 +102,7 @@ class MagmaRunner {
  	vector<string> launch_child_and_read_data(const string& command_line, std::chrono::duration<int> timeout) {
 		cout<<"starting process :"<<command_line<<endl;
 		auto whole_result=launch_child(command_line,timeout);
+		cout<<whole_result<<endl;
  		vector<string> result;
  		std::stringstream s{whole_result};
 		string line,last_string;
