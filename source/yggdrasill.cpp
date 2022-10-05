@@ -67,12 +67,21 @@ OmittedEntries update_db_from_file(const fs::path& file, Database& db,const CSVS
 	return updater.update_db(csv,schema);
 }
 
-void update_db(const fs::path& work_output_path, Database& db,const CSVSchema& schema) {
+void update_db(const fs::path& work_output_path, Database& db,const CSVSchema& schema,ostream& os) {
 	set<string> ignored_algorithms;
 	OmittedEntries omitted;
 	for (auto& file : fs::directory_iterator(work_output_path)) 
 		omitted+=update_db_from_file(file,db,schema);	
-	cout<<omitted.to_string();
+	os<<omitted.to_string();
+}
+
+void read_schema_and_update_db(const string& schema_path, const string& db_path, const string& work_output_path, ostream& output) {	
+    	pt::ptree tree;
+    	pt::read_info(schema_path,tree);
+    	auto schema=CSVSchema{tree};
+		auto db=SimpleDatabase{fs::path{db_path},schema.no_secondary_input_columns()};
+		update_db(work_output_path,db,schema,output);
+		db.close();
 }
 
 
@@ -83,7 +92,7 @@ int main(int argv, char** argc) {
     ("workoutput", po::value<string>(), "directory containing the output of the work script")
     ("db", po::value<string>()->default_value("db"), "directory containing the database")
     ("schema", po::value<string>(), "file containing the description of the CSV schema");
-	;
+	("output", po::value<string>()->default_value(""), "if specified, filename to receive output");
 	po::variables_map vm;
 	po::store(po::parse_command_line(argv, argc, desc), vm);
 	po::notify(vm);    	
@@ -96,17 +105,18 @@ int main(int argv, char** argc) {
 	string work_output_path=vm["workoutput"].as<string>();
 	string db_path=vm["db"].as<string>();
 	string schema_path=vm["schema"].as<string>();
+	string output_file=vm["output"].as<string>();
 
-	try {	
-    pt::ptree tree;
-    pt::read_info(schema_path,tree);
-    auto schema=CSVSchema{tree};
-		auto db=SimpleDatabase{fs::path{db_path},schema.no_secondary_input_columns()};
-		update_db(work_output_path,db,schema);
-		db.close();
+	try {
+		if (output_file.empty())
+			read_schema_and_update_db(schema_path,db_path,work_output_path,cout);
+		else {
+			ofstream output{output_file,std::ofstream::trunc};		
+			read_schema_and_update_db(schema_path,db_path,work_output_path,output);
+		}
 	}
 	catch (Exception& e) {
-		cout<<e.what()<<endl;
+		cerr<<e.what()<<endl;
 		return 1;
 	}
 }

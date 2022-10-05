@@ -1,2 +1,16 @@
-execute_process(COMMAND bin/hliðskjálf --script test/script/workscript.m --workoutput test/output --computations test/computations/test.comp  --schema test/script/testschema.info --workload 1 --stdio >/dev/null)
-execute_process(COMMAND cat test/output/* | sort > test/workscript.test)
+function(cat IN_FILE OUT_FILE)
+  file(READ ${IN_FILE} CONTENTS)
+  file(APPEND ${OUT_FILE} "${CONTENTS}")
+endfunction()
+message (COMMAND  ${CMAKE_BINARY_DIR}/hliðskjálf --script ${PROJECT_SOURCE_DIR}/script/workscript.m --workoutput ${PROJECT_BINARY_DIR}/output --computations ${PROJECT_SOURCE_DIR}/computations/test.comp  --schema ${PROJECT_SOURCE_DIR}/script/testschema.info --workload 1 --stdio)
+execute_process(COMMAND  ${CMAKE_BINARY_DIR}/hliðskjálf --script ${PROJECT_SOURCE_DIR}/script/workscript.m --workoutput ${PROJECT_BINARY_DIR}/output --computations ${PROJECT_SOURCE_DIR}/computations/test.comp  --schema ${PROJECT_SOURCE_DIR}/script/testschema.info --workload 1 --stdio)
+
+set (UNSORTED_OUTPUT ${PROJECT_BINARY_DIR}/workscript.unsorted)
+file(WRITE ${UNSORTED_OUTPUT} "")
+file(GLOB output_files LIST_DIRECTORIES false "${PROJECT_BINARY_DIR}/output/*")
+foreach(out_file ${output_files})	
+    cat(${out_file} ${UNSORTED_OUTPUT})
+endforeach()
+
+execute_process(COMMAND sort ${UNSORTED_OUTPUT} -o ${PROJECT_BINARY_DIR}/workscript.test)
+file(REMOVE ${UNSORTED_OUTPUT})
