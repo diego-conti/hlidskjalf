@@ -91,7 +91,7 @@ class MagmaRunner {
 		std::future<std::string> data, error;
 		auto child=boost::process::child{command_line, boost::process::std_in.close(), boost::process::std_out > data, boost::process::std_err > error,ios};		
 		processes.add(&child);		
-		bool terminated_early=ios.run_one_for(timeout);		
+		bool terminated_early=ios.run_until(timeout);		
 		processes.remove(&child);
 		return data.get();
 	}
