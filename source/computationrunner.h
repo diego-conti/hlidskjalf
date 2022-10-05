@@ -19,6 +19,7 @@
 #define COMPUTATION_RUNNER_H
 #include "synchronizedcomputations.h"
 #include <boost/process.hpp>
+#include <boost/asio/io_service.hpp>
 #include "parameters.h"
 
 constexpr int COMPUTATIONS_TO_STORE_IN_MEMORY=1024*1024;
@@ -85,21 +86,27 @@ class MagmaRunner {
 		}
 	}
 
+	string launch_child(const string& command_line,std::chrono::duration<int> timeout) {
+		boost::asio::io_service ios;
+		std::future<std::string> data;
+		auto child=boost::process::child{command_line, boost::process::std_in.close(), boost::process::std_out > data, ios};
+		processes.add(&child);		
+		bool terminated_early=ios.run_for(timeout);
+		processes.remove(&child);
+		return data.get();
+	}
+
 	//returns empty vector if timeout
  	vector<string> launch_child_and_read_data(const string& command_line, std::chrono::duration<int> timeout) {
-		cout<<"satrting process :"<<command_line<<endl;
+		cout<<"starting process :"<<command_line<<endl;
+		auto whole_result=launch_child(command_line,timeout);
  		vector<string> result;
- 		boost::process::ipstream is;
-		auto child=boost::process::child{command_line, boost::process::std_out > is};
-		processes.add(&child);
-		string last_string;
-		string line;
-		while (is && std::getline(is, line) && !line.empty())  {
+ 		std::stringstream s{whole_result};
+		string line,last_string;
+		while (s && std::getline(s, line) && !line.empty())  {
 			cout<<line<<endl;
   			add_line(result,line,last_string);    
 		}
-		bool terminated_early=child.wait_for(timeout);
-		processes.remove(&child);
 		for (auto l: result) cout<<l<<endl;
 		cout<<endl;
 		return result;
