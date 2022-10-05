@@ -3,8 +3,6 @@ function(cat IN_FILE OUT_FILE)
   file(APPEND ${OUT_FILE} "${CONTENTS}")
 endfunction()
 
-string (JOIN " " LOG COMMAND  "${CMAKE_TOP_BINARY_DIR}/hlidskjalf --script ${PROJECT_SOURCE_DIR}/script/workscript.m --workoutput ${PROJECT_BINARY_DIR}/output --computations ${PROJECT_SOURCE_DIR}/computations/test.comp  --schema ${PROJECT_SOURCE_DIR}/script/testschema.info --workload 1 --stdio")
-message(${LOG})
 execute_process(COMMAND ${CMAKE_TOP_BINARY_DIR}/hlidskjalf --script ${PROJECT_SOURCE_DIR}/script/workscript.m --workoutput ${PROJECT_BINARY_DIR}/output --computations ${PROJECT_SOURCE_DIR}/computations/test.comp  --schema ${PROJECT_SOURCE_DIR}/script/testschema.info --workload 1 --stdio)
 
 set (UNSORTED_OUTPUT ${PROJECT_BINARY_DIR}/workscript.unsorted)
