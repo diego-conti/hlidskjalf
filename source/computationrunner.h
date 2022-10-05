@@ -93,7 +93,7 @@ class MagmaRunner {
 		processes.add(&child);		
 		ios.run_for(timeout);
 		child.terminate();
-		ios.stop();
+		ios.shutdown();
 		processes.remove(&child);
 		return data.get();
 	}
