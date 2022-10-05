@@ -3,7 +3,7 @@ function(cat IN_FILE OUT_FILE)
   file(APPEND ${OUT_FILE} "${CONTENTS}")
 endfunction()
 
-execute_process(COMMAND ${CMAKE_TOP_BINARY_DIR}/hlidskjalf --script ${PROJECT_SOURCE_DIR}/script/workscript.m --workoutput ${PROJECT_BINARY_DIR}/output --computations ${PROJECT_SOURCE_DIR}/computations/test.comp  --schema ${PROJECT_SOURCE_DIR}/script/testschema.info --workload 1 --stdio)
+execute_process(COMMAND ${CMAKE_TOP_BINARY_DIR}/hlidskjalf --script ${PROJECT_SOURCE_DIR}/script/workscript.m --workoutput ${PROJECT_BINARY_DIR}/output --computations ${PROJECT_SOURCE_DIR}/computations/test.comp  --schema ${PROJECT_SOURCE_DIR}/script/testschema.info --workload 1 --stdio WORKING_DIRECTORY ${CMAKE_TOP_BINARY_DIR})
 
 set (UNSORTED_OUTPUT ${PROJECT_BINARY_DIR}/workscript.unsorted)
 file(WRITE ${UNSORTED_OUTPUT} "")

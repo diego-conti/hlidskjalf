@@ -1,5 +1,3 @@
-print GetCurrentDirectory();
-
 load "../magma/hliðskjálflayer.m";
 
 if assigned printVersion then print "test version of test script"; quit; end if;
