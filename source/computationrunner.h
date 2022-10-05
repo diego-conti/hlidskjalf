@@ -89,29 +89,21 @@ class MagmaRunner {
 	string launch_child(const string& command_line,std::chrono::duration<int> timeout) {
 		boost::asio::io_service ios;
 		std::future<std::string> data, error;
-		auto child=boost::process::child{command_line, boost::process::std_in.close(), boost::process::std_out > data, boost::process::std_err > error,ios};
-		cout<<"child created"<<endl;
+		auto child=boost::process::child{command_line, boost::process::std_in.close(), boost::process::std_out > data, boost::process::std_err > error,ios};		
 		processes.add(&child);		
-		bool terminated_early=ios.run();
-		cout<<"child run"<<endl;
+		bool terminated_early=ios.run();		
 		processes.remove(&child);
 		return data.get();
 	}
 
 	//returns empty vector if timeout
  	vector<string> launch_child_and_read_data(const string& command_line, std::chrono::duration<int> timeout) {
-		cout<<"starting process :"<<command_line<<endl;
-		auto whole_result=launch_child(command_line,timeout);
-		cout<<whole_result<<endl;
+		auto whole_result=launch_child(command_line,timeout);		
  		vector<string> result;
  		std::stringstream s{whole_result};
 		string line,last_string;
-		while (s && std::getline(s, line) && !line.empty())  {
-			cout<<line<<endl;
-  			add_line(result,line,last_string);    
-		}
-		for (auto l: result) cout<<l<<endl;
-		cout<<endl;
+		while (s && std::getline(s, line) && !line.empty())  			
+  			add_line(result,line,last_string);    		
 		return result;
  	}
 
