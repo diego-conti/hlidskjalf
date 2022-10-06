@@ -57,7 +57,7 @@ public:
 		unique_lock<mutex> lock{mtx};
 		list<Computation> result;
 		for (auto& p : computations_by_memory_limit)
-			if (p.first>memory_limit) 
+			if (p.first>=memory_limit) 
 				result.splice(result.end(),p.second);			
 		size_-=result.size();
 		return result;

@@ -85,7 +85,7 @@ public:
 			print_thread_id();
 			ui->os<<"process with "<<memory_limit<<"MB ";
 			if (timeout!=std::chrono::duration<int>::zero())
-				ui->os<<" and timeout "<<std::chrono::duration_cast<std::chrono::seconds>(timeout).count()<<"s";
+				ui->os<<"and timeout "<<std::chrono::duration_cast<std::chrono::seconds>(timeout).count()<<"s ";
 			ui->os<<"started with "<<assigned_computations<<" computations"<<endl; 			
 		}
  	}
