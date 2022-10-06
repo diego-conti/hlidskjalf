@@ -97,8 +97,10 @@ class MagmaRunner {
 		auto child=boost::process::child{command_line, boost::process::std_in.close(), boost::process::std_out > data, boost::process::std_err > error,ios};		
 		processes.add(&child);
 		promise<void> canceled;
-		if (timeout!=std::chrono::duration<int>::zero()) 
+		if (timeout!=std::chrono::duration<int>::zero()) {
 			std::thread t{terminate_after_timeout,  std::ref(child), timeout, canceled.get_future()};
+			t.detach();
+		}
 		ios.run();
 		canceled.set_value();
 		processes.remove(&child);
