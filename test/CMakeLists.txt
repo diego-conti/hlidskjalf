@@ -16,10 +16,10 @@ add_test(NAME preparecomputation COMMAND ${CMAKE_CURRENT_BINARY_DIR}/computation
 set_tests_properties(preparecomputation PROPERTIES FIXTURES_SETUP createTestFiles)
 add_test(NAME prepareworkscript COMMAND ${CMAKE_COMMAND} -DWORKSCRIPT=workscript -DHLIDSKJALF_FLAGS="" -DCMAKE_TOP_BINARY_DIR=${CMAKE_BINARY_DIR} -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR} -DPROJECT_BINARY_DIR=${PROJECT_BINARY_DIR} -P ${CMAKE_CURRENT_SOURCE_DIR}/runworkscript.cmake )
 set_tests_properties(prepareworkscript PROPERTIES FIXTURES_SETUP createTestFiles)
-#add_test(NAME preparetimeoutworkscript COMMAND ${CMAKE_COMMAND} -DWORKSCRIPT=timeoutworkscript [[-DHLIDSKJALF_FLAGS=--base-timeout 2 --memory 2048 --total-memory 4]]
-#	-DCMAKE_TOP_BINARY_DIR=${CMAKE_BINARY_DIR} -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR} -DPROJECT_BINARY_DIR=${PROJECT_BINARY_DIR} -P ${CMAKE_CURRENT_SOURCE_DIR}/runworkscript.cmake 
-#)
-#set_tests_properties(preparetimeoutworkscript PROPERTIES FIXTURES_SETUP createTestFiles)
+add_test(NAME preparetimeoutworkscript COMMAND ${CMAKE_COMMAND} -DWORKSCRIPT=timeoutworkscript [[-DHLIDSKJALF_FLAGS=--base-timeout 2 --memory 2048 --total-memory 4]]
+	-DCMAKE_TOP_BINARY_DIR=${CMAKE_BINARY_DIR} -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR} -DPROJECT_BINARY_DIR=${PROJECT_BINARY_DIR} -P ${CMAKE_CURRENT_SOURCE_DIR}/runworkscript.cmake 
+)
+set_tests_properties(preparetimeoutworkscript PROPERTIES FIXTURES_SETUP createTestFiles)
 
 file(GLOB ok_files LIST_DIRECTORIES false "${PROJECT_SOURCE_DIR}/*.ok")
 foreach(ok_file ${ok_files})	
