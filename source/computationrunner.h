@@ -21,6 +21,7 @@
 #include <boost/process.hpp>
 #include <boost/asio/io_service.hpp>
 #include "parameters.h"
+#include <future>
 
 constexpr int COMPUTATIONS_TO_STORE_IN_MEMORY=1024*1024;
 
@@ -85,16 +86,21 @@ class MagmaRunner {
 				break;
 		}
 	}
-
+	static void terminate_after_timeout (boost::process::child& child, std::chrono::duration<int> timeout, future<void> canceled) {
+		if (canceled.wait_for(timeout)!=std::future_status::ready) {
+			child.terminate();
+		}
+	}
 	string launch_child(const string& command_line,std::chrono::duration<int> timeout) {
 		boost::asio::io_service ios;
 		std::future<std::string> data, error;
 		auto child=boost::process::child{command_line, boost::process::std_in.close(), boost::process::std_out > data, boost::process::std_err > error,ios};		
-		processes.add(&child);		
-		if (timeout==std::chrono::duration<int>::zero()) ios.run();
-		else ios.run_for(timeout);		
-		child.terminate();
+		processes.add(&child);
+		promise<void> canceled;
+		if (timeout!=std::chrono::duration<int>::zero()) 
+			std::thread t{terminate_after_timeout,  std::ref(child), timeout, canceled.get_future()};
 		ios.run();
+		canceled.set_value();
 		processes.remove(&child);
 		return data.get();
 	}
