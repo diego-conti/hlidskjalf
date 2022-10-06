@@ -31,7 +31,7 @@ endforeach()
 add_test(NAME preparedb COMMAND ${CMAKE_COMMAND} -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR} -DPROJECT_BINARY_DIR=${PROJECT_BINARY_DIR} -DCMAKE_TOP_BINARY_DIR=${CMAKE_BINARY_DIR}
  -P ${CMAKE_CURRENT_SOURCE_DIR}/runyggdrasill.cmake
 )
-set_tests_properties(preparedb PROPERTIES FIXTURES_SETUP createDbTestFiles createTestFiles)
+set_tests_properties(preparedb PROPERTIES FIXTURES_SETUP "createDbTestFiles createTestFiles")
 file(GLOB db_files "${PROJECT_SOURCE_DIR}/db.ok/*")
 foreach(db_file ${db_files})	
 	cmake_path(GET db_file FILENAME filename)
