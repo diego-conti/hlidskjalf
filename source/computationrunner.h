@@ -249,10 +249,14 @@ public:
 	void set_no_computations(int ncomputations) {
 		if (ncomputations>0) parameters.computation_parameters.computations_per_process=ncomputations;
 	}
+
+	std::chrono::duration<int> timeout(megabytes memory_limit) const {
+		return (memory_limit*parameters.computation_parameters.base_timeout)/parameters.computation_parameters.base_memory_limit;
+	}
 	AssignedComputations compute(const string& process_id, AssignedComputations computations, megabytes memory_limit) const {
 		auto output_filename=parameters.script_parameters.output_dir+"/"+process_id+parameters.script_parameters.work_output_extension;		
 		if (terminating()) return AssignedComputations{};
-		auto data=	magma_runner->invoke_magma_script(process_id, computations,parameters,memory_limit,parameters.computation_parameters.timeout);
+		auto data=	magma_runner->invoke_magma_script(process_id, computations,parameters,memory_limit,timeout(memory_limit));
 		ofstream output{output_filename,std::ofstream::app};		
 		for (auto& line : data) {
 			int size=computations.size();

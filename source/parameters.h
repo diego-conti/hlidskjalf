@@ -55,7 +55,7 @@ struct ComputationParameters {
 	int lowest_free_memory_bound_in_kb=0;
 	megabytes base_memory_limit;
 	megabytes total_memory_limit;
-	std::chrono::duration<int> timeout;
+	std::chrono::duration<int> base_timeout;
 };
 
 struct CommunicationParameters {
@@ -113,9 +113,9 @@ Parameters command_line_parameters(int argv, char** argc) {
     ("nthreads", po::value<int>()->default_value(10), "number of worker threads and magma processes to be run")
     ("workload", po::value<int>()->default_value(100), "computations per process")
     ("free-memory", po::value<int>()->default_value(0), "if set, quit all computations when system free memory goes below this threshold in GB")
-    ("memory", po::value<int>()->default_value(128), "base memory limit in MB for each thread")
     ("total-memory", po::value<int>()->default_value(4), "total memory limit in GB for all threads")
-	("timeout", po::value<int>()->default_value(0),"time limit in seconds, or 0 for no limit")
+    ("memory", po::value<int>()->default_value(128), "base memory limit in MB for each thread")
+	("base-timeout", po::value<int>()->default_value(0),"base timeout limit in seconds, or 0 for no limit")
 			
 			//communication parameters
     ("valhalla", po::value<string>() , "file where unterminated computations are to be stored (defaults to <output>.valhalla)");
@@ -138,7 +138,7 @@ Parameters command_line_parameters(int argv, char** argc) {
 	result.stdio=vm.count("stdio");
 	result.script_parameters={vm["script"].as<string>(), output_dir,vm["flags"].as<string>(), vm["extension"].as<string>()};
 	result.input_parameters={vm["computations"].as<string>(), vm["schema"].as<string>(),vm["db"].as<string>()};
-	result.computation_parameters={vm["nthreads"].as<int>(), vm["workload"].as<int>(),  vm["free-memory"].as<int>()*1024*1024, vm["memory"].as<int>(), vm["total-memory"].as<int>()*1024, std::chrono::seconds(vm["timeout"].as<int>())};
+	result.computation_parameters={vm["nthreads"].as<int>(), vm["workload"].as<int>(),  vm["free-memory"].as<int>()*1024*1024, vm["memory"].as<int>(), vm["total-memory"].as<int>()*1024, std::chrono::seconds(vm["base-timeout"].as<int>())};
 	result.communication_parameters={valhalla,random_non_existing_file()};
 	return result;	
 }

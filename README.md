@@ -36,6 +36,8 @@ There are two components to this program.
 
 *Hliðskjálf* runs the work script. The computation is run in parallel, by distributing the computations to be done among different Magma processes. Each process is instructed to run with a given memory limit; if Magma terminates before finishing (typically because memory runs out), Hliðskjálf tries to assign the offending computation to a process with a higher memory limit as soon as one becomes available. The distribution of memory among processes is changed automatically as computations progress. Computations which cannot be completed even by increasing the memory limit are skipped, and their input values stored into a *valhalla* file. Hliðskjálf ensures that computations are not repeated by reading the files in the work script output directory, and eliminating the corresponding computations. In addition, hliðskjálf can be instructed to eliminate the computations in an existing database.
 
+If --base-timeout is also specified, processes are also assigned a time limit. This limit is increased alongside with the memory limit, proportionally, when computations are repeated.
+
 ## Schema file
 
 A text file taking e.g. the following form
