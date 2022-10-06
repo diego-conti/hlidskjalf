@@ -5,7 +5,7 @@ endfunction()
 
 set (OUTPUT_DIR ${PROJECT_BINARY_DIR}/output)
 file(REMOVE_RECURSE ${OUTPUT_DIR})
-execute_process(COMMAND ${CMAKE_TOP_BINARY_DIR}/hlidskjalf --script ${PROJECT_SOURCE_DIR}/script/${WORKSCRIPT}.m --workoutput ${OUTPUT_DIR} --computations ${PROJECT_SOURCE_DIR}/computations/test.comp  --schema ${PROJECT_SOURCE_DIR}/script/testschema.info --workload 1 --stdio WORKING_DIRECTORY ${CMAKE_TOP_BINARY_DIR})
+execute_process(COMMAND ${CMAKE_TOP_BINARY_DIR}/hlidskjalf --script ${PROJECT_SOURCE_DIR}/script/${WORKSCRIPT}.m --workoutput ${OUTPUT_DIR} --computations ${PROJECT_SOURCE_DIR}/computations/test.comp  --schema ${PROJECT_SOURCE_DIR}/script/testschema.info --workload 1 --stdio WORKING_DIRECTORY ${CMAKE_TOP_BINARY_DIR} --base-timeout 2)
 
 set (UNSORTED_OUTPUT ${PROJECT_BINARY_DIR}/${WORKSCRIPT}.unsorted)
 file(WRITE ${UNSORTED_OUTPUT} "")

@@ -130,10 +130,12 @@ class ThreadInteractiveUIHandle : public ThreadUIHandle {
 public:
 	ThreadInteractiveUIHandle(const array<WindowHandle,2>& windows,int thread) : status_window{windows[0]}, msg_window{windows[1]}, thread{thread} {	
 	}
- 	void computations_added(int assigned_computations, megabytes memory) override {
+ 	void computations_added(int assigned_computations, megabytes memory, std::chrono::duration<int> timeout) override {
 		print_thread_id(memory);
 		if (assigned_computations) {
-			status_window<<"working on "<<assigned_computations<<" computations"<<release;
+			status_window<<"working on "<<assigned_computations<<" computations";
+			if (timeout!=std::chrono::duration<int>::zero()) status_window<<", timeout "<<std::chrono::duration_cast<std::chrono::seconds>(timeout).count()<<"s";
+			status_window<<release;
 		}
 		else status_window<<release; 
  	}
@@ -145,9 +147,11 @@ public:
 		print_thread_id(memory);
 		status_window<<"(paused)"<<release;
 	}
-	void bad_computation(const Computation& computation, megabytes memory_limit) override {
+	void bad_computation(const Computation& computation, megabytes memory_limit, std::chrono::duration<int> timeout) override {
 		print_msg_time();
-		msg_window<<"could not complete "<<computation.to_string()<<" with "<<memory_limit<<" MB of memory"<<release;
+		msg_window<<"could not complete "<<computation.to_string()<<" with "<<memory_limit<<" MB of memory";
+		if (timeout!=std::chrono::duration<int>::zero()) msg_window<<" in less than "<<std::chrono::duration_cast<std::chrono::seconds>(timeout).count()<<"s";
+		msg_window<<release;
 	}
 	void finished_computations(int no_computations, megabytes memory) override {
 		print_msg_time();

@@ -6,11 +6,11 @@ class Computation;
 
 class ThreadUIHandle  {
 public:
-	virtual void computations_added(int assigned_computations, megabytes memory_limit) =0;
+	virtual void computations_added(int assigned_computations, megabytes memory_limit, std::chrono::duration<int> timeout) =0;
 	virtual void thread_started(megabytes memory) =0;
 	virtual void thread_stopped(megabytes memory) =0;
 	virtual	void thread_terminated() =0;
-	virtual void bad_computation(const Computation& computation, megabytes memory_limit)  =0;	
+	virtual void bad_computation(const Computation& computation, megabytes memory_limit, std::chrono::duration<int> timeout)  =0;	
 	virtual	void finished_computations(int no_computations, megabytes memory) =0;
 	virtual void unpacking_computations()=0;		
 	virtual void unpacked_computations(int unpacked) =0;
@@ -53,11 +53,11 @@ public:
 
 class ThreadNoUIHandle : public ThreadUIHandle {
 public:
-	void computations_added(int assigned_computations, megabytes memory_limit)  {}
+	void computations_added(int assigned_computations, megabytes memory_limit, std::chrono::duration<int> )  {}
 	void thread_started(megabytes memory)  {}
 	void thread_stopped(megabytes memory)  {}
 	void thread_terminated() {};
-	void bad_computation(const Computation& computation, megabytes memory_limit)  {}
+	void bad_computation(const Computation& computation, megabytes memory_limit, std::chrono::duration<int> )  {}
 	void finished_computations(int no_computations, megabytes memory) {}
 	void unpacking_computations() override {}
 	void unpacked_computations(int unpacked) override {}

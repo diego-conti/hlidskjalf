@@ -228,7 +228,7 @@ public:
 			auto computations_per_process=no_computations_to_assign(memory_limit);
 			if (computations_per_process==0 && assigned_computations.empty()) computations_per_process=1;
 			SynchronizedComputations::add_computations_to_do(assigned_computations,computations_per_process,memory_limit);
-			thread_ui.computations_added(assigned_computations.size(),memory_limit);
+			thread_ui.computations_added(assigned_computations.size(),memory_limit, process_timeout(memory_limit));
 	}
 	
 	void tick() {	
@@ -250,13 +250,13 @@ public:
 		if (ncomputations>0) parameters.computation_parameters.computations_per_process=ncomputations;
 	}
 
-	std::chrono::duration<int> timeout(megabytes memory_limit) const {
+	std::chrono::duration<int> process_timeout(megabytes memory_limit) const {
 		return (memory_limit*parameters.computation_parameters.base_timeout)/parameters.computation_parameters.base_memory_limit;
 	}
 	AssignedComputations compute(const string& process_id, AssignedComputations computations, megabytes memory_limit) const {
 		auto output_filename=parameters.script_parameters.output_dir+"/"+process_id+parameters.script_parameters.work_output_extension;		
 		if (terminating()) return AssignedComputations{};
-		auto data=	magma_runner->invoke_magma_script(process_id, computations,parameters,memory_limit,timeout(memory_limit));
+		auto data=	magma_runner->invoke_magma_script(process_id, computations,parameters,memory_limit,process_timeout(memory_limit));
 		ofstream output{output_filename,std::ofstream::app};		
 		for (auto& line : data) {
 			int size=computations.size();

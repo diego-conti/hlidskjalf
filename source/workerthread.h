@@ -32,7 +32,7 @@ class WorkerThread {
 			computations_to_do=ComputationRunner::singleton().compute(process_id_as_string,computations_to_do,memory_limit);
 			if (!computations_to_do.empty()) {
 				auto bad=computations_to_do.begin();
-				ui_handle->bad_computation(*bad,memory_limit);
+				ui_handle->bad_computation(*bad,memory_limit,ComputationRunner::singleton().process_timeout(memory_limit));
 				ComputationRunner::singleton().mark_as_bad(*bad,memory_limit);
 				computations_to_do.erase(bad);
 			}

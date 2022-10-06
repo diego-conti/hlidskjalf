@@ -79,11 +79,14 @@ class ThreadStreamUIHandle : public ThreadUIHandle {
 	}
 public:
 	ThreadStreamUIHandle(const StreamUserInterface* ui, int thread) : ui{ui}, thread{thread} {}
- 	void computations_added(int assigned_computations, megabytes memory_limit) override {
+ 	void computations_added(int assigned_computations, megabytes memory_limit,std::chrono::duration<int> timeout) override {
 		if (assigned_computations) {
 			unique_lock<mutex> lck{ui->lock};
 			print_thread_id();
-			ui->os<<"process with "<<memory_limit<<"MB started with "<<assigned_computations<<" computations"<<endl; 	
+			ui->os<<"process with "<<memory_limit<<"MB ";
+			if (timeout!=std::chrono::duration<int>::zero())
+				ui->os<<" and timeout "<<std::chrono::duration_cast<std::chrono::seconds>(timeout).count()<<"s";
+			ui->os<<"started with "<<assigned_computations<<" computations"<<endl; 			
 		}
  	}
 	void thread_started(megabytes memory) override {
@@ -96,10 +99,13 @@ public:
 		print_thread_id();
 		ui->os<<"stopped thread with a limit of "<<memory<<"MB"<<endl;
 	}
-	void bad_computation(const Computation& computation, megabytes memory_limit) override {
+	void bad_computation(const Computation& computation, megabytes memory_limit,std::chrono::duration<int> timeout) override {
 		unique_lock<mutex> lck{ui->lock};
 		print_thread_id();
-		ui->os<<"could not complete "<<computation.to_string()<<" with "<<memory_limit<<" MB of memory"<<endl;	
+		ui->os<<"could not complete "<<computation.to_string()<<" with "<<memory_limit<<" MB of memory";
+		if (timeout!=std::chrono::duration<int>::zero())
+				ui->os<<" in less than "<<std::chrono::duration_cast<std::chrono::seconds>(timeout).count()<<"s";
+		ui->os<<endl;
 	}
 	void finished_computations(int no_computations, megabytes memory) override {
 		unique_lock<mutex> lck{ui->lock};
