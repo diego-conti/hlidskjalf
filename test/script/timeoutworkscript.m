@@ -19,7 +19,7 @@ ComputeAndWriteToStdout:=procedure(fileName)
 	while not IsEof(line) do
 		d,X,Y:=ReadLine(line);
 		starttime:=Realtime();
-		while Realtime(starttime) lt d do
+		while Realtime(starttime) lt d do;
 		end while;
 		WriteLine(d,X,Y,Sprint(d) cat X cat Y);
 		line:=Gets(file);
