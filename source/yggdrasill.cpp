@@ -91,7 +91,7 @@ int main(int argv, char** argc) {
     ("help", "produce help message")
     ("workoutput", po::value<string>(), "directory containing the output of the work script")
     ("db", po::value<string>()->default_value("db"), "directory containing the database")
-    ("schema", po::value<string>(), "file containing the description of the CSV schema");
+    ("schema", po::value<string>(), "file containing the description of the CSV schema")
 	("output", po::value<string>()->default_value(""), "if specified, filename to receive output");
 	po::variables_map vm;
 	po::store(po::parse_command_line(argv, argc, desc), vm);
