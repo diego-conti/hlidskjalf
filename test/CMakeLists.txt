@@ -28,12 +28,13 @@ foreach(ok_file ${ok_files})
 	set_tests_properties(${file_stem} PROPERTIES FIXTURES_REQUIRED createTestFiles)
 endforeach()
 
-add_test(NAME preparedb COMMAND ${CMAKE_COMMAND} -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR} -DPROJECT_BINARY_DIR=${PROJECT_BINARY_DIR} -P ${CMAKE_CURRENT_SOURCE_DIR}/runyggdrasill.cmake)
-set_tests_properties(preparedb PROPERTIES FIXTURES_SETUP createDbTestFiles)
+add_test(NAME preparedb COMMAND ${CMAKE_COMMAND} -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR} -DPROJECT_BINARY_DIR=${PROJECT_BINARY_DIR} -DCMAKE_TOP_BINARY_DIR=${CMAKE_BINARY_DIR}
+ -P ${CMAKE_CURRENT_SOURCE_DIR}/runyggdrasill.cmake
+)
+set_tests_properties(preparedb PROPERTIES FIXTURES_SETUP createDbTestFiles createTestFiles)
 file(GLOB db_files "${PROJECT_SOURCE_DIR}/db.ok/*")
 foreach(db_file ${db_files})	
 	cmake_path(GET db_file FILENAME filename)
-	add_test(NAME "db${filename}" COMMAND ${CMAKE_COMMAND} -E compare_files db.test/${filename}.test ${db_file})
+	add_test(NAME "db${filename}" COMMAND ${CMAKE_COMMAND} -E compare_files ${PROJECT_BINARY_DIR}/db.test/${filename}.test ${db_file})
 	set_tests_properties(db${filename} PROPERTIES FIXTURES_REQUIRED createDbTestFiles)
 endforeach()
-
