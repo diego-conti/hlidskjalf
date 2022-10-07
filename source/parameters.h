@@ -35,8 +35,6 @@ struct ScriptParameters {
 
 	string script_invocation(const string& process_id, const string& data_filename, megabytes memory_limit) const {
 		return "megabytes:="s+to_string(memory_limit)
-			+" outputPath:="s +output_dir
-			+" processId:="s +process_id
 			+" dataFile:="s +data_filename 
 			+ " "s +flags
 			+ " "s +script;
