@@ -124,8 +124,8 @@ public:
 
 	string script_version() const {
 	  boost::process::ipstream is;
-	  cout<<magma_path+ " -b "+ScriptParameters{magma_script,".","printVersion:=true","."}.script_invocation("x","x",0)<<endl;
- 		boost::process::system (magma_path+ " -b "+ScriptParameters{magma_script,".","printVersion:=true","."}.script_invocation("x","x",0),boost::process::std_out > is);
+	  cout<<magma_path+ " -b "+ScriptParameters{magma_script,".","printVersion:=true","."}.script_invocation("x",0)<<endl;
+ 		boost::process::system (magma_path+ " -b "+ScriptParameters{magma_script,".","printVersion:=true","."}.script_invocation("x",0),boost::process::std_out > is);
     std::string line;
     string script_version;
     while (std::getline(is, line) && !line.empty()) 
@@ -136,7 +136,7 @@ public:
 	 std::vector<std::string> invoke_magma_script(const string& process_id,const AssignedComputations& computations,const Parameters& parameters, megabytes memory_limit, std::chrono::duration<int> timeout) {						
 		auto data_filename=parameters.communication_parameters.huginn+"/"+process_id+".data";
 		write_computations_to_do(data_filename,computations);
-		return launch_child_and_read_data(magma_path+" -b "+parameters.script_parameters.script_invocation(process_id,data_filename, memory_limit),timeout);	
+		return launch_child_and_read_data(magma_path+" -b "+parameters.script_parameters.script_invocation(data_filename, memory_limit),timeout);	
 	}
 	void terminate_all() {
 		processes.terminate();	

@@ -33,7 +33,7 @@ struct ScriptParameters {
 	string flags;
 	string work_output_extension;
 
-	string script_invocation(const string& process_id, const string& data_filename, megabytes memory_limit) const {
+	string script_invocation(const string& data_filename, megabytes memory_limit) const {
 		return "megabytes:="s+to_string(memory_limit)
 			+" dataFile:="s +data_filename 
 			+ " "s +flags
