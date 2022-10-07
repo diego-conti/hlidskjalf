@@ -7,27 +7,31 @@ The user must provide
 - a *computations file*, namely a CSV file whose rows represent computations to be performed.
 - a *schema file*, which defines the format of both the work script output and the computations file; in particular, it defines which columns correspond to computation input, which to output, and which should be ignored. In addition, the schema file may specify that some columns of the computation file represent ranges; this means that a row in the computation file is converted into a sequence of computations to be fed to the work script, one for each integer in the specified range.
 
-## Compiling and testing
+## Compiling, installing and testing
 
-`Hliðskjálf` has been tested on CentOS Linux 7, using gcc 8.3.1, boost 1.71, cmake 3.24.2 and Magma 2.24-5.
+`Hliðskjálf` requires [CMake](https://cmake.org) and the [Boost libraries](https://www.boost.org) to compile; it requires [Magma](http://magma.maths.usyd.edu.au/magma/) to run. `Hliðskjálf` has been tested on CentOS Linux 7, using gcc 8.3.1, boost 1.71, cmake 3.24.2 and Magma 2.24-5.
 
-
-Run
+To compile, run
 
 	mkdir build
 	cd build
 	cmake ..
 	cmake --build .
 	
-to compile. This creates two executables in the `build` directory.
+This creates two executables in the `build` directory.
 
-Run
+To install, run 
+
+	cd build
+	cmake --install . --prefix=the/path/I/choose
+
+This installs the executables `yggdrasill` and `hliðskjálf` to the path of your choice.
+
+To test that everything works, run
 	
 	cd build
 	ctest --test-dir test
 	
-to run some tests.
-
 The directory *example* contains an example which can be run using
 	
 	example/sh/run.sh
@@ -69,49 +73,6 @@ The format of the computations file is inferred from this definition: each row c
 
 In this case, the first three columns of the computation file correspond to the first three columns of the work script output, taken in the same order.
 
-### Replacement rules
-Output column specification may contain replacement rules, as in 
-
-	columns 7 {
-		output 5
-		replacement {
-			match Odin
-			with Alfaðir
-		}
-	}
-
-This has the effect of replacing every occurrence of Odin in column 5 with Alfaðir, when reading work script output. To define more than one replacement rule, use curly braces, as in 
-
-	columns 7 {
-		output 5 {
-			replacement {
-				match gold
-				with Sifjar haddr
-			}
-			replacement {
-				match sky
-				with Ymis haus
-			}
-		}			
-	}
-
-
-### Omit rules
-The schema file can also contain patterns of the form:
-
-	omitrules {
-		condition {
-			column 6
-			contains Huginn
-		}
-		condition {
-			column 5
-			match Muninn	
-		}
-	}
-
-The effect of this declaration is to ignore, when reading work script output, every row such that either column 6 contains the string Huginn or column 5 matches exactly the string Muninn.
-
 ### Range columns
 Input columns may contain ranges, as in the following:
 
@@ -131,6 +92,49 @@ Here, d,a,b are integers, and TEXT is an arbitrary string. This line is interpre
 		.
 		.
 	d;b;TEXT
+
+### Replacement rules
+Output column specification may contain replacement rules, as in 
+
+	columns 7 {
+		output 5
+		replacement {
+			match Odin
+			with Alfaðir
+		}
+	}
+
+This has the effect of replacing every occurrence of Odin in column 5 with Alfaðir, when `yggdrasill` reads work script output to update the database. To define more than one replacement rule, use curly braces, as in 
+
+	columns 7 {
+		output 5 {
+			replacement {
+				match gold
+				with Sifjar haddr
+			}
+			replacement {
+				match sky
+				with Ymis haus
+			}
+		}			
+	}
+
+### Omit rules
+The schema file can also contain patterns of the form:
+
+	omitrules {
+		condition {
+			column 6
+			contains Huginn
+		}
+		condition {
+			column 5
+			match Muninn	
+		}
+	}
+
+The effect of this declaration is to ignore, when `yggdrasill` reads work script output, every row such that either column 6 contains the string Huginn or column 5 matches exactly the string Muninn. The corresponding entries will not be inserted into the database.
+
 
 ## Work script
 
