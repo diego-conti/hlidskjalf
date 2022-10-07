@@ -1,4 +1,4 @@
-Multithreading
+### Multithreading
 
 Threads are symmetric, but each has its own memory limit, which can change. Initially, *nthreads*-1 are initiated with the lowest memory limit, and one large thread with the rest of the memory.
 
@@ -29,8 +29,7 @@ Each thread
 - performs computations.
 - if halted, mark the offending computation as "bad"
 
-
-Proposal:
-large threads take only one computation at a time when computations.size()=0 [alternative: only one bad computation at a time]
-Large threads release their memory and reallocate when computations.size()=0
-non-large threads only release their memory when they have no computations to do.
+[//]: # (Ideas:)
+[//]: # ( large threads take only one computation at a time when computations.size()=0 [alternative: only one bad computation at a time])
+[//]: # ( Large threads release their memory and reallocate when computations.size()=0)
+[//]: # (non-large threads only release their memory when they have no computations to do.)
