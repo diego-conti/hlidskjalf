@@ -3,13 +3,14 @@
 
 The user must provide
 
-- a /work script/, namely a Magma script that performs the actual computational work. The work script takes a list of computations as an input and outputs a CSV file where each row contains both the input and the output for a specific computation.
-- a /computations file/, namely a CSV file whose rows represent computations to be performed.
-- a /schema file/, which defines the format of both the work script output and the computations file; in particular, it defines which columns correspond to computation input, which to output, and which should be ignored. In addition, the schema file may specify that some columns of the computation file represent ranges; this means that a row in the computation file is converted into a sequence of computations to be fed to the work script, one for each integer in the specified range.
+- a *work script*, namely a Magma script that performs the actual computational work. The work script takes a list of computations as an input and outputs a CSV file where each row contains both the input and the output for a specific computation.
+- a *computations file*, namely a CSV file whose rows represent computations to be performed.
+- a *schema file*, which defines the format of both the work script output and the computations file; in particular, it defines which columns correspond to computation input, which to output, and which should be ignored. In addition, the schema file may specify that some columns of the computation file represent ranges; this means that a row in the computation file is converted into a sequence of computations to be fed to the work script, one for each integer in the specified range.
 
 ## Compiling and testing
 
-`Hliðskjálf` has been tested on CentOS Linux 7, using gcc 8.3.1, boost 1.71 and Magma 2.24-5.
+`Hliðskjálf` has been tested on CentOS Linux 7, using gcc 8.3.1, boost 1.71, cmake 3.24.2 and Magma 2.24-5.
+
 
 Run
 
@@ -22,7 +23,8 @@ to compile. This creates two executables in the `build` directory.
 
 Run
 	
-	sh/test.sh
+	cd build
+	ctest --test-dir test
 	
 to run some tests.
 
@@ -37,7 +39,7 @@ There are two components to this program.
 
 `Hliðskjálf` runs the work script. The computation is run in parallel, by distributing the computations to be done among different Magma processes. Each process is instructed to run with a given memory limit, and possibly with a time limit; if Magma terminates before finishing (because time or memory run out), Hliðskjálf tries to assign the offending computation to a process with a higher memory limit as soon as one becomes available. The distribution of memory among processes is changed automatically as computations progress. Computations which cannot be completed even by increasing the memory limit are skipped, and their input values stored into a *valhalla* file. Hliðskjálf ensures that computations are not repeated by reading the files in the work script output directory, and eliminating the corresponding computations. In addition, hliðskjálf can be instructed to eliminate the computations in an existing database.
 
-If --base-timeout is also specified, processes are also assigned a time limit. This limit is increased alongside with the memory limit, proportionally, when computations are repeated.
+If `--base-timeout` is also specified, processes are also assigned a time limit. This limit is increased alongside with the memory limit, proportionally, when computations are repeated.
 
 ## Schema file
 
@@ -52,7 +54,7 @@ A text file taking e.g. the following form
 		textinputcolumn 2
 	}
 
-This schema declares that each row of the work script contains 7 columns. Columns 6 and 5 represent computation output; columns 4,2,3 the input; columns 1 and 7 are ignored. Column 4 is an integer, which represents the *primary* input to the computation; columns 2 and 3 are treated as arbitrary text. 
+This schema declares that each row of the work script output contains 7 columns. Columns 6 and 5 represent computation output; columns 4,2,3 the input; columns 1 and 7 are ignored. Column 4 is an integer, which represents the *primary* input to the computation; columns 2 and 3 are treated as arbitrary text. 
 
 The format of the computations file is inferred from this definition: each row contains three columns, representing in this order: the primary input (an integer), the secondary input corresponding to column 3 in the work script output, and the secondary input corresponding to column 2 in the work script output. In practice, it is typically simpler to respect the order in the definition, so the above could be rewritten as 
 
@@ -100,7 +102,7 @@ The schema file can also contain patterns of the form:
 	omitrules {
 		condition {
 			column 6
-			contains Hugin
+			contains Huginn
 		}
 		condition {
 			column 5
@@ -108,7 +110,7 @@ The schema file can also contain patterns of the form:
 		}
 	}
 
-The effect of this declaration is to ignore, when reading work script output, every row such that either column 6 contains the string Hugin or column 5 matches exactly the string Hugin.
+The effect of this declaration is to ignore, when reading work script output, every row such that either column 6 contains the string Huginn or column 5 matches exactly the string Muninn.
 
 ### Range columns
 Input columns may contain ranges, as in the following:
