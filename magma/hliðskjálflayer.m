@@ -18,7 +18,7 @@
 
 This code should be loaded into the work script.
 
-The work script should read the computations to be done from dataFile and write the output of each computation to standard output using the function WriteComputation.
+The work script should read the computations to be done from dataFile and write the output of each computation to standard output using the function WriteComputation, or WriteFields.
 
 A function ReadComputation is also provided to read the output of WriteComputation (for usage without Hliðskjálf).
 
@@ -52,6 +52,16 @@ WriteComputation:=procedure(lineWithNewlines)
 		end while;
 		print "OVER";
 	end if;	
+end procedure;
+
+WriteFields:=procedure(field,...)
+	last:=Sprint(field[#field]);
+	if #field eq 1 then 
+		line:=last;
+	else 
+		line:=&cat [Sprint(x) cat ";" : x in Prune(field)] cat last;
+	end if;
+	WriteComputation(line);
 end procedure;
 
 _SplitLine:=function(line)

@@ -25,10 +25,6 @@ ReadLine:=function(line)
 	return StringToInteger(components[1]), components[2],components[3];
 end function;
 
-WriteLine:=procedure(primaryInput1,secondaryInput1,secondaryInput2,output)
-	WriteComputation(Sprint(primaryInput1) cat ";" cat secondaryInput1 cat ";" cat secondaryInput2 cat ";" cat output);
-end procedure;
-
 //return a string representing the output of the computation. In this example, returns the sum of the primary input with the lengths of the secondary inputs
 Compute:=function(primaryInput1,secondaryInput1,secondaryInput2)
 	return Sprint(primaryInput1+#secondaryInput1+#secondaryInput2);
@@ -40,7 +36,7 @@ ComputeAndWriteToStdout:=procedure(fileName)
 	while not IsEof(line) do
 		primaryInput1,secondaryInput1,secondaryInput2:=ReadLine(line);
 		output:=Compute(primaryInput1,secondaryInput1,secondaryInput2);
-		WriteLine(primaryInput1,secondaryInput1,secondaryInput2,output);
+		WriteFields(primaryInput1,secondaryInput1,secondaryInput2,output);
 		line:=Gets(file);
 	end while;
 end procedure;
